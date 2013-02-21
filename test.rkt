@@ -35,24 +35,21 @@
              (s-app (s-lam 'x (s-id 'x)) (s-str "ecks")))
 
 (check-parse '(obj)
-             (s-obj '()))
-(check-parse '(obj ("first" : Doof) (last : "Us"))
-             (s-obj (list (cons (s-str "first") (s-id 'Doof))
-                          (cons (s-id 'last) (s-str "Us")))))
-(check-parse '(obj (((cat "do") "of") : (f "us")))
-             (s-obj (list (cons (s-app (s-prim 'cat (s-str "do"))
-                                       (s-str "of"))
-                                (s-app (s-id 'f) (s-str "us"))))))
+             (s-obj))
 
 (check-parse '(get (obj) "f")
-             (s-get (s-obj '()) (s-str "f")))
+             (s-get (s-obj) (s-str "f")))
 (check-parse '(get o f)
              (s-get (s-id 'o) (s-id 'f)))
 
 (check-parse '(ext (obj) ("f" : "v"))
-             (s-ext (s-obj '()) (s-str "f") (s-str "v")))
+             (s-ext (s-obj) (s-str "f") (s-str "v")))
 (check-parse '(ext o (f : v))
              (s-ext (s-id 'o) (s-id 'f) (s-id 'v)))
+(check-parse '(ext (ext (obj) ("first" : Doof)) (last : "Us"))
+             (s-ext (s-ext (s-obj) (s-str "first") (s-id 'Doof))
+                    (s-id 'last) (s-str "Us")))
+
 
 
 ;; Interp tests
@@ -63,8 +60,8 @@
 (check-interp '"doofus" doofus)
 (check-interp-exn 'doofid) ; unbound id
 
-(check-interp '((cat "doof") "us") doofus)
 (check-interp '((lambda (x) x) "doofus") doofus)
+(check-interp '((cat "doof") "us") doofus)
 (check-interp '(((lambda (x)
                    (lambda (y)
                      ((cat x) y)))
@@ -80,31 +77,32 @@
 (define o1 (objv (list (cons "doofus" dodo))))
 (define o2 (objv (list (cons "doofus" dodo) (cons "dodo" doofus))))
 
-(check-interp '(obj) (v-obj (hash)))
-(check-interp '(obj ("doofus" : "dodo") ("dodo" : "doofus"))
+(check-interp '(obj) (objv empty))
+(check-interp '(ext (obj) ("doofus" : "dodo"))
+              o1)
+(check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("dodo" : "doofus"))
               o2)
-(check-interp '(obj (((cat "doof") "us") : ((lambda (x) x) "dodo")))
+(check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("doofus" : "doofus"))
+              (objv (list (cons "doofus" doofus))))
+
+(check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("dodo" : "doofus"))
+              o2)
+(check-interp '(ext (obj) (((cat "doof") "us") : ((lambda (x) x) "dodo")))
               o1)
 
-(check-interp '(get (obj ("doofus" : "dodo")) "doofus" )
+(check-interp '(get (ext (obj) ("doofus" : "dodo")) "doofus" )
               dodo)
 (check-interp-exn '(get (obj)  "doofus")) ; field not found
-(check-interp '(get (obj ("dodo" : "doofus")
+(check-interp '(get (ext (ext (obj) ("dodo" : "doofus"))
                          ("doofus" : "dodo"))
                     ((cat "doof") "us"))
               dodo)
 
-(check-interp '(ext (obj) ("doofus" : "dodo"))
-              o1)
-(check-interp '(ext (obj ("doofus" : "dodo")) ("dodo" : "doofus"))
-              o2)
-(check-interp '(ext (obj ("doofus" : "dodo")) ("doofus" : "doofus"))
-              (objv (list (cons "doofus" doofus))))
-
 (check-interp '(names (obj))
               (objv '()))
-(check-interp '(names (obj ("doofus" : "dodo") ("dodo" : "doofus")))
+(check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
+                           ("dodo" : "doofus")))
               (objv (list (cons "first" doofus)
                           (cons "rest"
                                 (objv (list (cons "first" dodo)
-                                           (cons "rest" (objv '()))))))))
+                                            (cons "rest" (objv '()))))))))

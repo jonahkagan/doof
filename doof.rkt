@@ -32,7 +32,7 @@
 (struct: s-lam ([arg : Symbol] [body : Expr]) #:transparent)
 (struct: s-app ([fun : Expr] [arg : Expr]) #:transparent)
 (struct: s-prim ([name : Symbol] [arg : Expr]) #:transparent)
-(struct: s-obj ([fields : (Listof (Pairof Expr Expr))]) #:transparent)
+(struct: s-obj () #:transparent)
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
 
@@ -64,13 +64,7 @@
         (cond
           [(symbol? arg) (s-lam arg (parse body))]
           [else (error "lambda arg not a symbol")])]
-       [(list 'obj fields ...)
-        (s-obj (map (lambda (fe)
-                      (match fe
-                        [(list name ': value)
-                         (cons (parse name) (parse value))]
-                        [_ (error "bad parse field")]))
-                    fields))]
+       [(list 'obj) (s-obj)]
        [(list 'get obj field)
         (s-get (parse obj) (parse field))]
        [(list 'ext obj (list field ': val))
@@ -83,7 +77,9 @@
              [else (s-app (s-id fid) (parse arg))])]
           [exp (s-app exp (parse arg))])]
        [_ (error "bad parse list")])]
-    [else (error "bad parse")]))
+    [else (error "bad parse")]
+    
+    ))
 
 
 (define: (interp-expr [e : Expr]) : Value
@@ -111,14 +107,8 @@
                 (extend-env (bind carg (interp arg env)) cenv))]
        [else (error "can't apply non-function value")])]
 
-    [(s-obj fields)
-     (v-obj (make-immutable-hash
-             (map (lambda: ([f : (Pairof Expr Expr)])
-                    (match (interp (car f) env)
-                      [(v-str name) 
-                       (cons name (interp (cdr f) env))]
-                      [_ (error "field name must be a string")]))
-                  fields)))]
+    [(s-obj)
+     (v-obj (make-immutable-hash empty))]
 
     [(s-get obj field)
      (match (interp obj env)

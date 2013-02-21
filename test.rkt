@@ -50,7 +50,8 @@
              (s-ext (s-ext (s-obj) (s-str "first") (s-id 'Doof))
                     (s-id 'last) (s-str "Us")))
 
-
+(check-parse '(if-empty (obj) "then" "else")
+             (s-if-empty (s-obj) (s-str "then") (s-str "else")))
 
 ;; Interp tests
 
@@ -99,10 +100,15 @@
               dodo)
 
 (check-interp '(names (obj))
-              (objv '()))
+              (objv empty))
 (check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
                            ("dodo" : "doofus")))
               (objv (list (cons "first" doofus)
                           (cons "rest"
                                 (objv (list (cons "first" dodo)
                                             (cons "rest" (objv '()))))))))
+
+(check-interp '(if-empty (obj) "then" "else")
+              (v-str "then"))
+(check-interp '(if-empty (ext (obj) ("a" : "b")) "then" "else")
+              (v-str "else"))

@@ -9,6 +9,7 @@
  (struct-out s-obj)
  (struct-out s-get)
  (struct-out s-ext)
+ (struct-out s-if-empty)
  
  (struct-out v-str)
  (struct-out v-clos)
@@ -25,7 +26,8 @@
 
 ;(define-predicate sexp? Sexp))
 
-(define-type Expr (U s-str s-id s-lam s-app s-prim s-obj s-get s-ext))
+(define-type Expr (U s-str s-id s-lam s-app s-prim s-obj s-get s-ext
+                     s-if-empty))
 
 (struct: s-str ([str : String]) #:transparent)
 (struct: s-id ([id : Symbol]) #:transparent)
@@ -35,12 +37,17 @@
 (struct: s-obj () #:transparent)
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
+(struct: s-if-empty ([obj : Expr] [then : Expr] [else : Expr])
+  #:transparent)
+;(struct: s-rec ([id : Symbol] [val : Expr] [body : Expr]) #:transparent)
 
 (define-type Value (U v-str v-clos v-obj))
 
 (struct: v-str ([str : String]) #:transparent)
 (struct: v-clos ([arg : Symbol] [body : Expr] [env : Env]) #:transparent)
 (struct: v-obj ([fields : (HashTable String Value)]) #:transparent)
+
+(define hash make-immutable-hash)
 
 (define-type Env (Listof (Pairof Symbol Value)))
 (define mt-env empty)
@@ -69,6 +76,8 @@
         (s-get (parse obj) (parse field))]
        [(list 'ext obj (list field ': val))
         (s-ext (parse obj) (parse field) (parse val))]
+       [(list 'if-empty obj then else)
+        (s-if-empty (parse obj) (parse then) (parse else))]
        [(list fun arg)
         (match (parse fun)
           [(s-id fid)
@@ -108,7 +117,7 @@
        [else (error "can't apply non-function value")])]
 
     [(s-obj)
-     (v-obj (make-immutable-hash empty))]
+     (v-obj (hash empty))]
 
     [(s-get obj field)
      (match (interp obj env)
@@ -126,7 +135,16 @@
           [(v-str name)
            (v-obj (hash-set fields name (interp val env)))]
           [_ (error "ext: field name must be a string")])]
-       [_ (error "ext: can't extend a non-object")])]
+       [_ (error "ext: expected object")])]
+    
+    [(s-if-empty obj then else)
+     (match (interp obj env)
+       [(v-obj fields) 
+        (cond
+          [(equal? fields (hash empty))
+           (interp then env)]
+          [else (interp else env)])]
+       [_ (error "if-empty: expected object")])]
     ))
 
 ; Primitives exposed to the language user
@@ -154,10 +172,7 @@
     [(names)
      (match arg
        [(v-obj fields)
-        (list->doof-list 
-         (map v-str 
-              (map (lambda: ([p : (Pairof String Value)]) (car p))
-                   (hash->list fields))))]
+        (list->doof-list (map v-str (hash-keys fields)))]
        [_ (error "names: expected object")])]
     
     [else (error "unknown prim")]))
@@ -167,8 +182,15 @@
 (define: (list->doof-list [vals : (Listof Value)]) : Value
   (foldl
    (lambda: ([val : Value] [obj : Value])
-     (v-obj (make-immutable-hash
+     (v-obj (hash
              (list (cons "first" val)
                    (cons "rest" obj)))))
-   (v-obj (make-immutable-hash '()))
+   (v-obj (hash empty))
    vals))
+
+(define: (value->string [v : Value]) : String
+  (match v
+    [(v-str s) s]
+    [(v-clos arg body env)
+     (format "(lambda (~a) ...)" arg)]
+    [(v-obj fields) "(obj ...)"]))

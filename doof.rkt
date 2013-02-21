@@ -95,8 +95,8 @@
 
     [(s-id id)
      (match (lookup id env)
-       [None (error (string-append "Unbound id: " (symbol->string id)))]
-       [(Some v) (v-str "a")])]
+       [(None) (error (string-append "Unbound id: " (symbol->string id)))]
+       [(Some v) v])]
 
     [(s-prim name arg)
      (prim name (interp arg env) env)]
@@ -154,7 +154,7 @@
                    (extend-env (bind 's1 arg) mt-env))]
     [(cat2) 
      (match (lookup 's1 env)
-       [(v-str s1)
+       [(Some (v-str s1))
         (match arg
           [(v-str s2)
            (v-str (string-append s1 s2))]

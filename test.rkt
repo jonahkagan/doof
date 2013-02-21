@@ -58,7 +58,7 @@
 ;; Interp tests
 
 (define doofus (v-str "doofus"))
-(define heyho (v-str "heyho"))
+(define dodo (v-str "dodo"))
 
 (check-interp '"doofus" doofus)
 (check-interp-exn 'doofid) ; unbound id
@@ -68,34 +68,43 @@
 (check-interp '(((lambda (x)
                    (lambda (y)
                      ((cat x) y)))
-                 "hey") "ho")
-              heyho)
+                 "do") "do")
+              dodo)
 (check-interp '(((lambda (x)
                    (lambda (x) x))
-                 "let's go") "heyho")
-              heyho)
+                 "shadowed") "dodo")
+              dodo)
 
-(define o1 (v-obj (make-immutable-hash (list (cons "doofus" heyho)))))
-(define o2 (v-obj (make-immutable-hash 
-                   (list (cons "doofus" heyho) (cons "heyho" doofus)))))
+(define (objv fields) (v-obj (make-immutable-hash fields)))
+
+(define o1 (objv (list (cons "doofus" dodo))))
+(define o2 (objv (list (cons "doofus" dodo) (cons "dodo" doofus))))
 
 (check-interp '(obj) (v-obj (hash)))
-(check-interp '(obj ("doofus" : "heyho") ("heyho" : "doofus"))
+(check-interp '(obj ("doofus" : "dodo") ("dodo" : "doofus"))
               o2)
-(check-interp '(obj (((cat "doof") "us") : ((lambda (x) x) "heyho")))
+(check-interp '(obj (((cat "doof") "us") : ((lambda (x) x) "dodo")))
               o1)
 
-(check-interp '(get (obj ("doofus" : "heyho")) "doofus" )
-              heyho)
+(check-interp '(get (obj ("doofus" : "dodo")) "doofus" )
+              dodo)
 (check-interp-exn '(get (obj)  "doofus")) ; field not found
-(check-interp '(get (obj ("heyho" : "doofus")
-                         ("doofus" : "heyho"))
+(check-interp '(get (obj ("dodo" : "doofus")
+                         ("doofus" : "dodo"))
                     ((cat "doof") "us"))
-              heyho)
+              dodo)
 
-(check-interp '(ext (obj) ("doofus" : "heyho"))
+(check-interp '(ext (obj) ("doofus" : "dodo"))
               o1)
-(check-interp '(ext (obj ("doofus" : "heyho")) ("heyho" : "doofus"))
+(check-interp '(ext (obj ("doofus" : "dodo")) ("dodo" : "doofus"))
               o2)
-(check-interp '(ext (obj ("doofus" : "heyho")) ("doofus" : "doofus"))
-              (v-obj (make-immutable-hash (list (cons "doofus" doofus)))))
+(check-interp '(ext (obj ("doofus" : "dodo")) ("doofus" : "doofus"))
+              (objv (list (cons "doofus" doofus))))
+
+(check-interp '(names (obj))
+              (objv '()))
+(check-interp '(names (obj ("doofus" : "dodo") ("dodo" : "doofus")))
+              (objv (list (cons "first" doofus)
+                          (cons "rest"
+                                (objv (list (cons "first" dodo)
+                                           (cons "rest" (objv '()))))))))

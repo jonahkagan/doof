@@ -18,7 +18,6 @@
  (rename-out [interp-expr interp]))
 
 (require racket/match)
-;(require/typed typed/racket [hash (All (k v) (k v 
 
 ;(define-predicate sexp? Sexp))
 
@@ -138,7 +137,7 @@
 
 ; Primitives exposed to the language user
 (define (is-prim? id)
-  (member id '(cat)))
+  (member id '(cat names)))
 
 (define: (prim [name : Symbol] [arg : Value] [env : Env]) : Value
   (case name
@@ -150,10 +149,26 @@
        [(v-str s1)
         (match arg
           [(v-str s2) 
-                  (v-str (string-append s1 s2))]
+           (v-str (string-append s1 s2))]
           [_ (error "cat: expected string as second arg")])]
        [_ (error "cat: expected string as first arg")])]
+    
+    [(names)
+     (match arg
+       [(v-obj fields)
+        (list->doof-list 
+         (map v-str 
+              (map (lambda: ([p : (Pairof String Value)]) (car p))
+                   (hash->list fields))))]
+       [_ (error "names: expected object")])]
+    
     [else (error "unknown prim")]))
 
-
-
+(define: (list->doof-list [vals : (Listof Value)]) : Value
+  (foldl
+   (lambda: ([val : Value] [obj : Value])
+     (v-obj (make-immutable-hash
+             (list (cons "first" val)
+                   (cons "rest" obj)))))
+   (v-obj (make-immutable-hash '()))
+   vals))

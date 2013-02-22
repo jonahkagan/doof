@@ -77,18 +77,16 @@
                  "shadowed") "dodo")
               dodo)
 
-(define (objv fields) (v-obj (make-immutable-hash fields)))
+(define o1 (v-obj (list (field "doofus" dodo))))
+(define o2 (v-obj (list (field "dodo" doofus) (field "doofus" dodo))))
 
-(define o1 (objv (list (cons "doofus" dodo))))
-(define o2 (objv (list (cons "doofus" dodo) (cons "dodo" doofus))))
-
-(check-interp '(obj) (objv empty))
+(check-interp '(obj) (v-obj empty))
 (check-interp '(ext (obj) ("doofus" : "dodo"))
               o1)
 (check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("dodo" : "doofus"))
               o2)
 (check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("doofus" : "doofus"))
-              (objv (list (cons "doofus" doofus))))
+              (v-obj (list (field "doofus" doofus))))
 
 (check-interp '(ext (ext (obj) ("doofus" : "dodo")) ("dodo" : "doofus"))
               o2)
@@ -104,13 +102,13 @@
               dodo)
 
 (check-interp '(names (obj))
-              (objv empty))
+              (v-obj empty))
 (check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
                            ("dodo" : "doofus")))
-              (objv (list (cons "first" doofus)
-                          (cons "rest"
-                                (objv (list (cons "first" dodo)
-                                            (cons "rest" (objv '()))))))))
+              (v-obj (list (field "first" dodo)
+                          (field "rest"
+                                (v-obj (list (field "first" doofus)
+                                            (field "rest" (v-obj empty))))))))
 
 (check-interp '(if-empty (obj) "then" "else")
               (v-str "then"))
@@ -127,7 +125,31 @@
                 (cat-reduce 
                  (ext (ext (obj)
                            ("first" : "doof"))
-                           ("rest" : (ext (ext (obj)
-                                               ("first" : "us"))
-                                               ("rest" : (obj)))))))
+                      ("rest" : (ext (ext (obj)
+                                          ("first" : "us"))
+                                     ("rest" : (obj)))))))
               doofus)
+
+(check-interp '((def-rec (foldr f)
+                  (lambda (list-obj)
+                    (lambda (acc)
+                      (if-empty
+                       list-obj
+                       acc
+                       ((f (get list-obj "first"))
+                        (((foldr f) (get list-obj "rest")) acc))))))
+                (((foldr (lambda (x)
+                           (lambda (acc)
+                             ((cat x) acc))))
+                  (names
+                   (ext
+                    (ext
+                     (ext
+                      (obj)
+                      ("a" : "A"))
+                     ("b" : "B"))
+                    ("c" : "C"))))
+                 ""))
+              (v-str "cba"))
+
+

@@ -15,6 +15,7 @@
  (struct-out v-str)
  (struct-out v-clos)
  (struct-out v-obj)
+ (struct-out field)
  
  parse
  (rename-out [interp-expr interp]))
@@ -27,6 +28,7 @@
 
 ;(define-predicate sexp? Sexp))
 
+; Syntax
 (define-type Expr (U s-str s-id s-lam s-app s-prim s-obj s-get s-ext
                      s-if-empty s-rec))
 
@@ -42,21 +44,45 @@
   #:transparent)
 (struct: s-rec ([name : Symbol] [fun : s-lam] [rest : Expr]) #:transparent)
 
+; Values
 (define-type Value (U v-str v-clos v-obj))
 
 (struct: v-str ([str : String]) #:transparent)
 (struct: v-clos ([arg : Symbol] [body : Expr] [env : Env]) #:transparent)
-(struct: v-obj ([fields : (HashTable String Value)]) #:transparent)
+(struct: v-obj ([fields : (Listof field)]) #:transparent)
 
-(define hash make-immutable-hash)
+; Object fields
+(struct: field ([name : String] [value : Value]) #:transparent)
 
+(define: (fields-get [fields : (Listof field)] [name : String])
+  : (Opt Value)
+  (cond
+    [(empty? fields) (None)]
+    [(equal? name (field-name (first fields)))
+     (Some (field-value (first fields)))]
+    [else (fields-get (rest fields) name)]))
+
+(define: (fields-ext [fields : (Listof field)] [name : String]
+                     [val : Value]) : (Listof field)
+  (cons (field name val)
+        (filter (lambda: ([f : field])
+                  (not (equal? (field-name f) name)))
+                fields)))
+
+(define: (fields-names [fields : (Listof field)]) : (Listof String)
+  (map field-name fields))
+
+; Environment
 (define-type Env (Listof binding))
 (struct: binding ([id : Symbol] [value : Value]) #:mutable)
 
 (define mt-env empty)
+
 (define: (extend-env [b : binding] [env : Env]) : Env
   (cons b env))
+
 (define bind binding)
+
 (define: (lookup [id : Symbol] [env : Env]) : (Opt Value)
   (cond
     [(empty? env) (None)]
@@ -92,7 +118,7 @@
           [(not (symbol? name)) (error "rec: name must be a symbol")]
           [(not (symbol? arg)) (error "rec: arg must be a symbol")]
           [else (s-rec name (s-lam arg (parse body)) (parse rest))])]
-
+       
        [(list fun arg)
         (match (parse fun)
           [(s-id fid)
@@ -100,7 +126,9 @@
              [(is-prim? fid) (s-prim fid (parse arg))]
              [else (s-app (s-id fid) (parse arg))])]
           [exp (s-app exp (parse arg))])]
-       [_ (error "bad parse list")])]
+       [_
+        (display se)
+        (error "bad parse list")])]
     [else (error "bad parse")]
     ))
 
@@ -111,15 +139,15 @@
 (define: (interp [e : Expr] [env : Env]) : Value
   (match e
     [(s-str s) (v-str s)]
-
+    
     [(s-id id)
      (match (lookup id env)
        [(None) (error (string-append "Unbound id: " (symbol->string id)))]
        [(Some v) v])]
-
+    
     [(s-prim name arg)
      (prim name (interp arg env) env)]
-
+    
     [(s-lam arg body)
      (v-clos arg body env)]
     
@@ -132,33 +160,35 @@
         (set-binding-value! rec-binding clos)
         (interp rest rec-env)]
        [_ (error "rec: somehow got a non-function")])]
-       
-
+    
+    
     [(s-app fun arg)
      (match (interp fun env)
        [(v-clos carg cbody cenv)
         (interp cbody
                 (extend-env (bind carg (interp arg env)) cenv))]
        [else (error "can't apply non-function value")])]
-
+    
     [(s-obj)
-     (v-obj (hash empty))]
-
+     (v-obj empty)]
+    
     [(s-get obj field)
      (match (interp obj env)
        [(v-obj fields)
         (match (interp field env)
           [(v-str name)
-           (hash-ref fields name)]
+           (match (fields-get fields name)
+             [(Some v) v]
+             [(None) (error "get: field not found")])]
           [_ (error "get: field name must be a string")])]
        [_ (error "get: can't get from a non-object")])]
-
+    
     [(s-ext obj field val)
      (match (interp obj env)
        [(v-obj fields)
         (match (interp field env)
           [(v-str name)
-           (v-obj (hash-set fields name (interp val env)))]
+           (v-obj (fields-ext fields name (interp val env)))]
           [_ (error "ext: field name must be a string")])]
        [_ (error "ext: expected object")])]
     
@@ -166,7 +196,7 @@
      (match (interp obj env)
        [(v-obj fields) 
         (cond
-          [(equal? fields (hash empty))
+          [(empty? fields)
            (interp then env)]
           [else (interp else env)])]
        [_ (error "if-empty: expected object")])]
@@ -197,7 +227,7 @@
     [(names)
      (match arg
        [(v-obj fields)
-        (list->doof-list (map v-str (hash-keys fields)))]
+        (list->doof-list (map v-str (fields-names fields)))]
        [_ (error "names: expected object")])]
     
     [else (error "unknown prim")]))
@@ -205,12 +235,11 @@
 ; Constructs an object representing a list that has a first and rest field.
 ; The empty list is just an empty object.
 (define: (list->doof-list [vals : (Listof Value)]) : Value
-  (foldl
+  (foldr
    (lambda: ([val : Value] [obj : Value])
-     (v-obj (hash
-             (list (cons "first" val)
-                   (cons "rest" obj)))))
-   (v-obj (hash empty))
+     (v-obj (list (field "first" val)
+                  (field "rest" obj))))
+   (v-obj empty)
    vals))
 
 (define: (value->string [v : Value]) : String

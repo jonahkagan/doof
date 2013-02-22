@@ -10,6 +10,7 @@
  (struct-out s-get)
  (struct-out s-ext)
  (struct-out s-if-empty)
+ (struct-out s-rec)
  
  (struct-out v-str)
  (struct-out v-clos)
@@ -27,7 +28,7 @@
 ;(define-predicate sexp? Sexp))
 
 (define-type Expr (U s-str s-id s-lam s-app s-prim s-obj s-get s-ext
-                     s-if-empty))
+                     s-if-empty s-rec))
 
 (struct: s-str ([str : String]) #:transparent)
 (struct: s-id ([id : Symbol]) #:transparent)
@@ -39,7 +40,7 @@
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
 (struct: s-if-empty ([obj : Expr] [then : Expr] [else : Expr])
   #:transparent)
-;(struct: s-rec ([id : Symbol] [val : Expr] [body : Expr]) #:transparent)
+(struct: s-rec ([name : Symbol] [fun : s-lam] [rest : Expr]) #:transparent)
 
 (define-type Value (U v-str v-clos v-obj))
 
@@ -49,15 +50,18 @@
 
 (define hash make-immutable-hash)
 
-(define-type Env (Listof (Pairof Symbol Value)))
-(define mt-env empty)
+(define-type Env (Listof binding))
+(struct: binding ([id : Symbol] [value : Value]) #:mutable)
 
-(define extend-env cons)
-(define bind cons)
+(define mt-env empty)
+(define: (extend-env [b : binding] [env : Env]) : Env
+  (cons b env))
+(define bind binding)
 (define: (lookup [id : Symbol] [env : Env]) : (Opt Value)
   (cond
     [(empty? env) (None)]
-    [(equal? id (car (first env))) (Some (cdr (first env)))]
+    [(equal? id (binding-id (first env)))
+     (Some (binding-value (first env)))]
     [else (lookup id (rest env))]))
 
 ; Really takes an Sexp, but typed/racket complained
@@ -71,13 +75,24 @@
         (cond
           [(symbol? arg) (s-lam arg (parse body))]
           [else (error "lambda arg not a symbol")])]
+       
        [(list 'obj) (s-obj)]
+       
        [(list 'get obj field)
         (s-get (parse obj) (parse field))]
+       
        [(list 'ext obj (list field ': val))
         (s-ext (parse obj) (parse field) (parse val))]
+       
        [(list 'if-empty obj then else)
         (s-if-empty (parse obj) (parse then) (parse else))]
+       
+       [(list (list 'def-rec (list name arg) body) rest)
+        (cond
+          [(not (symbol? name)) (error "rec: name must be a symbol")]
+          [(not (symbol? arg)) (error "rec: arg must be a symbol")]
+          [else (s-rec name (s-lam arg (parse body)) (parse rest))])]
+
        [(list fun arg)
         (match (parse fun)
           [(s-id fid)
@@ -87,7 +102,6 @@
           [exp (s-app exp (parse arg))])]
        [_ (error "bad parse list")])]
     [else (error "bad parse")]
-    
     ))
 
 
@@ -108,6 +122,17 @@
 
     [(s-lam arg body)
      (v-clos arg body env)]
+    
+    [(s-rec name lam rest)
+     (define rec-binding (bind name (v-str "dummy")))
+     (define rec-env (extend-env rec-binding env))
+     (define clos (interp lam rec-env))
+     (match clos
+       [(v-clos _ _ _)
+        (set-binding-value! rec-binding clos)
+        (interp rest rec-env)]
+       [_ (error "rec: somehow got a non-function")])]
+       
 
     [(s-app fun arg)
      (match (interp fun env)

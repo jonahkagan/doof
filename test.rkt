@@ -53,6 +53,10 @@
 (check-parse '(if-empty (obj) "then" "else")
              (s-if-empty (s-obj) (s-str "then") (s-str "else")))
 
+(check-parse '((def-rec (f x) x) (f "x"))
+             (s-rec 'f (s-lam 'x (s-id 'x))
+                    (s-app (s-id 'f) (s-str "x"))))
+
 ;; Interp tests
 
 (define doofus (v-str "doofus"))
@@ -112,3 +116,18 @@
               (v-str "then"))
 (check-interp '(if-empty (ext (obj) ("a" : "b")) "then" "else")
               (v-str "else"))
+
+(check-interp '((def-rec (f x) x) (f "doofus"))
+              doofus)
+(check-interp '((def-rec (cat-reduce strs)
+                  (if-empty strs
+                            ""
+                            ((cat (get strs "first"))
+                             (cat-reduce (get strs "rest")))))
+                (cat-reduce 
+                 (ext (ext (obj)
+                           ("first" : "doof"))
+                           ("rest" : (ext (ext (obj)
+                                               ("first" : "us"))
+                                               ("rest" : (obj)))))))
+              doofus)

@@ -106,9 +106,9 @@
 (check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
                            ("dodo" : "doofus")))
               (v-obj (list (field "first" dodo)
-                          (field "rest"
-                                (v-obj (list (field "first" doofus)
-                                            (field "rest" (v-obj empty))))))))
+                           (field "rest"
+                                  (v-obj (list (field "first" doofus)
+                                               (field "rest" (v-obj empty))))))))
 
 (check-interp '(if-empty (obj) "then" "else")
               (v-str "then"))
@@ -142,14 +142,34 @@
                            (lambda (acc)
                              ((cat x) acc))))
                   (names
-                   (ext
-                    (ext
-                     (ext
-                      (obj)
-                      ("a" : "A"))
-                     ("b" : "B"))
-                    ("c" : "C"))))
+                   (ext (ext (ext (obj)
+                                  ("a" : "A"))
+                             ("b" : "B"))
+                        ("c" : "C"))))
                  ""))
               (v-str "cba"))
 
-
+; Simple dep obj-to-obj function that adds "my" to each field name
+(check-interp '((def-rec (foldr f)
+                  (lambda (list-obj)
+                    (lambda (acc)
+                      (if-empty
+                       list-obj
+                       acc
+                       ((f (get list-obj "first"))
+                        (((foldr f) (get list-obj "rest")) acc))))))
+                ((lambda (orig)
+                   (((foldr
+                      (lambda (x)
+                        (lambda (acc)
+                          (ext acc (((cat "my") x) : (get orig x))))))
+                     (names orig))
+                    (obj)))
+                 (ext (ext (ext (obj)
+                                ("a" : "A"))
+                           ("b" : "B"))
+                      ("c" : "C"))))
+              
+              (v-obj (list (field "myc" (v-str "C"))
+                           (field "myb" (v-str "B"))
+                           (field "mya" (v-str "A")))))

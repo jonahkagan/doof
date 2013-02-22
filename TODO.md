@@ -1,2 +1,2 @@
-[] Make prim operators first-class
-[] Type checking!
+- [] Make prim operators first-class
+- [] Type checking!

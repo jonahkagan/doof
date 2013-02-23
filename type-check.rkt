@@ -7,14 +7,26 @@
 
 (define str (t-str (pat-all)))
 
+(define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
+  (match (cons t1 t2)
+    [(cons (t-str s1) (t-str s2))
+     (subpat? s1 s2)]
+    [(cons (t-arrow arg1 ret1) (t-arrow arg2 ret2))
+     (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
+    [_ (error "can't check subtype" t1 t2)]))
+
+(define: (subpat? [p1 : Pat] [p2 : Pat]) : Boolean
+  (match (cons p1 p2)
+    [(cons (pat-str p1) (pat-str p2)) (equal? p1 p2)]
+    [(cons _ (pat-all)) true]
+    [_ false]))
+          
 (define: (tc-expr [e : Expr]) : Type
   (tc e mt-env))
 
 (define: (tc [e : Expr] [env : TyEnv]) : Type
   (match e
-    ; Later we will use singleton string patterns, but for now, just
-    ; give everything type String
-    [(s-str s) str]
+    [(s-str s) (t-str (pat-str s))]
     
     [(s-id id)
      (match (lookup id env)
@@ -25,15 +37,15 @@
      (match (tc-prim name)
        [(t-arrow argt rett)
         (cond
-          [(equal? argt (tc arg env)) rett]
+          [(subtype? (tc arg env) argt) rett]
           [else (error "prim arg is wrong type" name)])])]
     
     [(s-lam type arg body)
      (match type
        [(t-arrow argt rett)
         (cond
-          [(equal? (tc body (extend-env (bind arg argt) env))
-                   rett)
+          [(subtype? (tc body (extend-env (bind arg argt) env))
+                     rett)
            (t-arrow argt rett)]
           [else (error "lambda type mismatch")])])]
     
@@ -43,7 +55,7 @@
      (match (tc fun env)
        [(t-arrow argt rett)
         (cond
-          [(equal? argt (tc arg env)) rett]
+          [(subtype? (tc arg env) argt) rett]
           [else (error "function type did not match arg type")])]
        [_ (error "can't apply non-function")])]
     

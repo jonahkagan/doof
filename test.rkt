@@ -11,9 +11,6 @@
 (define (check-parse sexpr expr)
   (check-equal? (parse sexpr) expr))
 
-(define (check-tc sexpr type)
-  (check-equal? (tc (parse sexpr)) type))
-
 (define (check-tc-exn sexpr)
   (check-exn exn:fail? (lambda () (tc (parse sexpr)))))
 
@@ -77,11 +74,8 @@
              (s-rec 'f (s-lam 'x (s-id 'x))
                     (s-app (s-id 'f) (s-str "x"))))
 
-; Type check tests
+; Type checking tests
 
-(define str (t-str (pat-all)))
-
-(check-tc '"doofus" str)
 (check-tc-exn 'unbound)
 
 (check-tc-exn '("doof" "us"))
@@ -91,8 +85,12 @@
 (check-tc-exn '((lambda (x String) -> String x)
                 (lambda (x String) -> String x)))
 
+(check-tc-exn '((lambda (x "doof") -> "doof" x) "us"))
+(check-tc-exn '((lambda (f (String -> String)) -> String (f "s"))
+                (lambda (x "doof") -> String x)))
 
 ; Interp tests
+; (these also serve as type checking tests)
 
 (define doofus (v-str "doofus"))
 (define dodo (v-str "dodo"))

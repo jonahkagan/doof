@@ -44,13 +44,13 @@
 (define-type Env (Envof Value))
 
 ; Types
-(define-type Type (U t-str t-arrow))
+(define-type Type (U t-str t-arrow t-obj))
 
 (struct: t-str ([pat : Pat]) #:transparent)
 (struct: t-arrow ([arg : Type] [ret : Type]) #:transparent)
-;(struct: t-obj ([fields : (Listof t-field)]) #:transparent)
+(struct: t-obj ([fields : (Listof t-field)]) #:transparent)
 
-;(struct: t-field ([name : Pat] [value : Type]) #:transparent)
+(struct: t-field ([name : Pat] [value : Type]) #:transparent)
 
 ; String patterns
 (define-type Pat (U pat-str pat-all))

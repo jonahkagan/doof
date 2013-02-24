@@ -57,8 +57,15 @@
      (match se
        [(list arg '-> ret)
         (t-arrow (parse-type arg) (parse-type ret))]
+       [(list 'Obj (list names ': fields) ...)
+        (cond
+          [(andmap string? names)
+           (t-obj (map t-field
+                       (map parse-pat names)
+                       (map parse-type fields)))]
+          [else (error "type field names must be pattern strings")])]
        [_ (error "bad type parse list" se)])]
     [else (error "bad type parse" se)]))
-    
+
 (define: (parse-pat [str : String]) : Pat
   (pat-str str))

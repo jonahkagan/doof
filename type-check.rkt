@@ -5,6 +5,11 @@
 
 (require "ast.rkt")
 
+(define: (a) (member? [elt : a] [lst : (Listof a)]) : Boolean
+  (cond
+    [(member elt lst) true]
+    [else false]))
+
 (define str (t-str (pat-all)))
 
 (define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
@@ -13,7 +18,12 @@
      (subpat? s1 s2)]
     [(cons (t-arrow arg1 ret1) (t-arrow arg2 ret2))
      (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
-    [_ (error "can't check subtype" t1 t2)]))
+    ; Width-based subtyping for objects
+    ; (could add depth also, but not necessary yet)
+    [(cons (t-obj fields1) (t-obj fields2))
+     (andmap (lambda: ([f : t-field]) (member? f fields1))
+             fields2)]
+    [_ false]))
 
 (define: (subpat? [p1 : Pat] [p2 : Pat]) : Boolean
   (match (cons p1 p2)
@@ -59,14 +69,50 @@
           [else (error "function type did not match arg type")])]
        [_ (error "can't apply non-function")])]
     
-    ;[(s-obj) ...]
+    [(s-obj) (t-obj empty)]
     
-    ;[(s-get obj field) ...]
+    [(s-get obj field)
+     (match (tc obj env)
+       [(t-obj fields)
+        (match (tc field env)
+          [(t-str name)
+           (match (fields-get fields name)
+             [(Some t) t]
+             [(None) (error "get: field not found" name)])]
+          [_ (error "get: expected string for field name")])]
+       [_ (error "get: expected obj")])]
     
-    ;[(s-ext obj field val) ...]
+    [(s-ext obj field val)
+     (match (tc obj env)
+       [(t-obj fields)
+        (match (tc field env)
+          [(t-str name) ; TODO check for singletons?
+           (t-obj (fields-ext fields name (tc val env)))]
+          [_ (error "ext: expected string for field name")])]
+       [_ (error "ext: expected obj")])]
     
     ;[(s-if-empty obj then else) ...]
     ))
+
+; For now, copied these from interp. Object get/ext will be well-typed
+; only when the given field name is a singleton string.
+(define: (fields-get [fields : (Listof t-field)] [name : Pat])
+  : (Opt Type)
+  (cond
+    [(empty? fields) (None)]
+    [(pat-equal? name (t-field-name (first fields)))
+     (Some (t-field-value (first fields)))]
+    [else (fields-get (rest fields) name)]))
+
+(define: (fields-ext [fields : (Listof t-field)] [name : Pat]
+                     [val : Type]) : (Listof t-field)
+  (cons (t-field name val)
+        (filter (lambda: ([f : t-field])
+                  (not (pat-equal? (t-field-name f) name)))
+                fields)))
+
+(define pat-equal? equal?)
+
 
 (define (tc-prim name)
   (case name

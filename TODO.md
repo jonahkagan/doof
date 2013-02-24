@@ -1,5 +1,5 @@
-[] Make prim operators first-class
-[] Type checking!
-    [] Preserve string type info over concatenation
-    [] Preserve most specific type info through lambda bodies
-    [x] Add object types
+- [] Make prim operators first-class
+- [] Type checking!
+    - [] Preserve string type info over concatenation
+    - [] Preserve most specific type info through lambda bodies
+    - [x] Add object types

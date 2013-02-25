@@ -109,12 +109,12 @@
                   (get o "doofus"))
                 (ext (obj) ("dodo" : "doofus"))))
 (check-tc '((lambda (o (Obj ("doofus" : "dodo"))) -> String
-                  (get o "doofus"))
+              (get o "doofus"))
             (ext (ext (obj) ("dodo" : "doofus")) ("doofus" : "dodo")))
           all)
 
 #;(check-tc '((cat "doof") "us")
-          (t-str (pat-str "doofus")))
+            (t-str (pat-str "doofus")))
 
 #;(check-tc '((lambda (x String) -> String x) "doof")
             (t-str (pat-str "doof")))
@@ -165,41 +165,41 @@
 (check-interp '(get (ext (obj) ("doofus" : "dodo")) "doofus" )
               dodo)
 #;(check-interp '(get (ext (ext (obj) ("dodo" : "doofus"))
-                         ("doofus" : "dodo"))
-                    ((cat "doof") "us"))
-              dodo)
+                           ("doofus" : "dodo"))
+                      ((cat "doof") "us"))
+                dodo)
 #;(check-interp '(get (ext (obj) ("doofus" : "dodo"))
-                    ((lambda (x String) -> String x) "doofus"))
-              dodo)
+                      ((lambda (x String) -> String x) "doofus"))
+                dodo)
 
-#;(check-interp '(names (obj))
-                (v-obj empty))
-#;(check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
-                             ("dodo" : "doofus")))
-                (v-obj (list (field "first" dodo)
-                             (field "rest"
-                                    (v-obj (list (field "first" doofus)
-                                                 (field "rest" (v-obj empty))))))))
+(check-interp '(names (obj))
+              (v-obj empty))
+(check-interp '(names (ext (ext (obj) ("doofus" : "dodo"))
+                           ("dodo" : "doofus")))
+              (v-obj (list (field "first" dodo)
+                           (field "rest"
+                                  (v-obj (list (field "first" doofus)
+                                               (field "rest" (v-obj empty))))))))
 
-#;(check-interp '(if-empty (obj) "then" "else")
-                (v-str "then"))
-#;(check-interp '(if-empty (ext (obj) ("a" : "b")) "then" "else")
-                (v-str "else"))
+(check-interp '(if-empty (obj) "then" "else")
+              (v-str "then"))
+(check-interp '(if-empty (ext (obj) ("a" : "b")) "then" "else")
+              (v-str "else"))
 
-#;(check-interp '((def-rec (f x) x) (f "doofus"))
-                doofus)
-#;(check-interp '((def-rec (cat-reduce strs)
-                    (if-empty strs
-                              ""
-                              ((cat (get strs "first"))
-                               (cat-reduce (get strs "rest")))))
-                  (cat-reduce 
-                   (ext (ext (obj)
-                             ("first" : "doof"))
-                        ("rest" : (ext (ext (obj)
-                                            ("first" : "us"))
-                                       ("rest" : (obj)))))))
-                doofus)
+(check-interp '((def-rec (f x String) -> String x) (f "doofus"))
+              doofus)
+(check-interp '((def-rec (cat-reduce strs (Obj)) -> String
+                  (if-empty strs
+                            ""
+                            ((cat (get strs "first"))
+                             (cat-reduce (get strs "rest")))))
+                (cat-reduce 
+                 (ext (ext (obj)
+                           ("first" : "doof"))
+                      ("rest" : (ext (ext (obj)
+                                          ("first" : "us"))
+                                     ("rest" : (obj)))))))
+              doofus)
 
 #;(check-interp '((def-rec (foldr f)
                     (lambda (list-obj)

@@ -29,11 +29,15 @@
        [`(if-empty ,obj ,then ,else)
         (s-if-empty (parse obj) (parse then) (parse else))]
        
-       #;[`((def-rec (,name ,arg) ,body) ,rest)
-          (cond
-            [(not (symbol? name)) (error "rec: name must be a symbol")]
-            [(not (symbol? arg)) (error "rec: arg must be a symbol")]
-            [else (s-rec name (s-lam arg (parse body)) (parse rest))])]
+       [`((def-rec (,name ,arg ,arg-t) -> ,ret-t ,body) ,rest)
+        (cond
+          [(not (symbol? name)) (error "def-rec: name must be a symbol")]
+          [(not (symbol? arg)) (error "def-rec: arg must be a symbol")]
+          [else (s-rec name 
+                       (s-lam (t-arrow (parse-type arg-t)
+                                       (parse-type ret-t))
+                              arg (parse body))
+                       (parse rest))])]
        
        [`(,fun ,arg) (s-app (parse fun) (parse arg))]
        

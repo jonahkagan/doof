@@ -22,7 +22,8 @@
   (list
    (bind 'cat (t-arrow str (t-arrow str str)))
    (bind 'cat2 (t-arrow str str))
-    ;(names . ...)
+   ; We'll need a more specific type for names eventually
+   (bind 'names (t-arrow (t-obj empty) (t-obj empty)))
     ))
 
 (define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
@@ -75,7 +76,10 @@
            (t-arrow argt rett)]
           [else (err "lambda type mismatch")])])]
     
-    ;[(s-rec name lam rest) ...]
+    [(s-rec name lam rest)
+     (define rec-env (extend-env (bind name (s-lam-type lam)) env))
+     (tc lam rec-env)
+     (tc rest rec-env)]
     
     [(s-app fun arg)
      (match (tc fun env)
@@ -107,7 +111,11 @@
           [_ (err "ext: expected string for field name")])]
        [_ (err "ext: expected obj")])]
     
-    ;[(s-if-empty obj then else) ...]
+    [(s-if-empty obj then else)
+     (match (tc obj env)
+       [(t-obj empty) (tc then env)]
+       [(t-obj _) (tc else env)]
+       [_ (err "if-empty: expected obj")])]
     ))
 
 ; For now, copied these from interp. Object get/ext will be well-typed

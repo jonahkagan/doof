@@ -10,7 +10,20 @@
     [(member elt lst) true]
     [else false]))
 
+(: err (String Any * -> Nothing))
+(define (err msg . vals)
+  (apply error 'tc msg vals))
+
+(define extend-env #{poly-extend-env @ Type})
+
 (define str (t-str (pat-all)))
+
+(define: prim-types : (Listof (binding Type))
+  (list
+   (bind 'cat (t-arrow str (t-arrow str str)))
+   (bind 'cat2 (t-arrow str str))
+    ;(names . ...)
+    ))
 
 (define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
   (match (cons t1 t2)
@@ -32,7 +45,10 @@
     [_ false]))
           
 (define: (tc-expr [e : Expr]) : Type
-  (tc e mt-env))
+  (tc e initial-env))
+
+(define: initial-env : TyEnv
+  (foldl extend-env mt-env prim-types))
 
 (define: (tc [e : Expr] [env : TyEnv]) : Type
   (match e
@@ -40,15 +56,15 @@
     
     [(s-id id)
      (match (lookup id env)
-       [(None) (error (string-append "Unbound id: " (symbol->string id)))]
+       [(None) (err "Unbound id: ~a" id)]
        [(Some t) t])]
     
-    [(s-prim name arg)
+    #;[(s-prim name arg)
      (match (tc-prim name)
        [(t-arrow argt rett)
         (cond
           [(subtype? (tc arg env) argt) rett]
-          [else (error "prim arg is wrong type" name)])])]
+          [else (err "prim ~a: arg is wrong type" name)])])]
     
     [(s-lam type arg body)
      (match type
@@ -57,7 +73,7 @@
           [(subtype? (tc body (extend-env (bind arg argt) env))
                      rett)
            (t-arrow argt rett)]
-          [else (error "lambda type mismatch")])])]
+          [else (err "lambda type mismatch")])])]
     
     ;[(s-rec name lam rest) ...]
     
@@ -66,8 +82,8 @@
        [(t-arrow argt rett)
         (cond
           [(subtype? (tc arg env) argt) rett]
-          [else (error "function type did not match arg type")])]
-       [_ (error "can't apply non-function")])]
+          [else (err "function type did not match arg type")])]
+       [_ (err "can't apply non-function")])]
     
     [(s-obj) (t-obj empty)]
     
@@ -78,9 +94,9 @@
           [(t-str name)
            (match (fields-get fields name)
              [(Some t) t]
-             [(None) (error "get: field not found" name)])]
-          [_ (error "get: expected string for field name")])]
-       [_ (error "get: expected obj")])]
+             [(None) (err "get: field not found: ~a" name)])]
+          [_ (err "get: expected string for field name")])]
+       [_ (err "get: expected obj")])]
     
     [(s-ext obj field val)
      (match (tc obj env)
@@ -88,8 +104,8 @@
         (match (tc field env)
           [(t-str name) ; TODO check for singletons?
            (t-obj (fields-ext fields name (tc val env)))]
-          [_ (error "ext: expected string for field name")])]
-       [_ (error "ext: expected obj")])]
+          [_ (err "ext: expected string for field name")])]
+       [_ (err "ext: expected obj")])]
     
     ;[(s-if-empty obj then else) ...]
     ))
@@ -112,11 +128,3 @@
                 fields)))
 
 (define pat-equal? equal?)
-
-
-(define (tc-prim name)
-  (case name
-    [(cat) (t-arrow str (t-arrow str str))]
-    [(cat2) (t-arrow str str)]
-    ;[(names) ...]
-    [else (error "unknown prim" name)]))

@@ -1,4 +1,4 @@
-- [] Make prim operators first-class
+- [x] Make prim operators first-class
 - [] Type checking!
     - [] Preserve string type info over concatenation
     - [] Preserve most specific type info through lambda bodies

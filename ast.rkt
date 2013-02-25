@@ -9,7 +9,7 @@
 ;(define-predicate sexp? Sexp))
 
 ; Syntax
-(define-type Expr (U s-str s-id s-lam s-app s-prim s-obj s-get s-ext
+(define-type Expr (U s-str s-id s-lam s-app s-obj s-get s-ext
                      s-if-empty s-rec))
 
 (struct: s-str ([str : String]) #:transparent)
@@ -17,7 +17,6 @@
 (struct: s-lam ([type : t-arrow] [arg : Symbol] [body : Expr])
   #:transparent)
 (struct: s-app ([fun : Expr] [arg : Expr]) #:transparent)
-(struct: s-prim ([name : Symbol] [arg : Expr]) #:transparent)
 (struct: s-obj () #:transparent)
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
@@ -25,16 +24,14 @@
   #:transparent)
 (struct: s-rec ([name : Symbol] [fun : s-lam] [rest : Expr]) #:transparent)
 
-(define prim-names '(cat names))
-
 ; Values
-(define-type Value (U v-str v-clos v-obj))
+(define-type Value (U v-str v-clos v-prim v-obj))
 
 (struct: v-str ([str : String]) #:transparent)
 (struct: v-clos ([arg : Symbol] [body : Expr] [env : Env]) #:transparent)
+(struct: v-prim ([name : Symbol]) #:transparent)
 (struct: v-obj ([fields : (Listof field)]) #:transparent)
 
-; Object fields
 (struct: field ([name : String] [value : Value]) #:transparent)
 
 ; Environments
@@ -64,7 +61,7 @@
 ; Environment helpers
 (define mt-env empty)
 
-(define: (a) (extend-env [b : (binding a)] [env : (Envof a)]) : (Envof a)
+(define: (a) (poly-extend-env [b : (binding a)] [env : (Envof a)]) : (Envof a)
   (cons b env))
 
 (define bind binding)

@@ -39,7 +39,7 @@
              (s-app (s-id 'apply) (s-id 'this)))
 (check-parse '((cat "that") "there")
              (s-app
-              (s-prim 'cat (s-str "that"))
+              (s-app (s-id 'cat) (s-str "that"))
               (s-str "there")))
 
 (check-parse '(lambda (x "s") -> "s" x)
@@ -138,6 +138,10 @@
                    (lambda (x String) -> String x))
                  "shadowed") "dodo")
               dodo)
+(check-interp '((lambda (catter (String -> (String -> String))) -> String
+                  ((catter "doof") "us"))
+                cat)
+              doofus)
 
 (define o1 (v-obj (list (field "doofus" dodo))))
 (define o2 (v-obj (list (field "dodo" doofus) (field "doofus" dodo))))

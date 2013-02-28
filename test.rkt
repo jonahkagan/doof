@@ -108,6 +108,9 @@
 (check-tc-exn '((lambda (o (Obj ("doofus" : "dodo"))) -> String
                   (get o "doofus"))
                 (ext (obj) ("dodo" : "doofus"))))
+(check-tc-exn '((lambda (o (Obj ("doofus" : "dodo"))) -> (Obj) o)
+                (ext (obj) ("doofus" : (lambda (x String) -> String x)))))
+
 (check-tc '((lambda (o (Obj ("doofus" : "dodo"))) -> String
               (get o "doofus"))
             (ext (ext (obj) ("dodo" : "doofus")) ("doofus" : "dodo")))
@@ -201,15 +204,16 @@
                                      ("rest" : (obj)))))))
               doofus)
 
-#;(check-interp '((def-rec (foldr f)
-                    (lambda (list-obj)
-                      (lambda (acc)
+(check-interp '((def-rec (foldr f (String -> (String -> String)))
+                    -> ((Obj) -> (String -> String))
+                    (lambda (list-obj (Obj)) -> (String -> String)
+                      (lambda (acc String) -> String
                         (if-empty
                          list-obj
                          acc
                          ((f (get list-obj "first"))
                           (((foldr f) (get list-obj "rest")) acc))))))
-                  (((foldr (lambda (x String) -> String
+                  (((foldr (lambda (x String) -> (String -> String)
                              (lambda (acc String) -> String
                                ((cat x) acc))))
                     (names
@@ -221,18 +225,19 @@
                 (v-str "cba"))
 
 ; Simple dep obj-to-obj function that adds "my" to each field name
-#;(check-interp '((def-rec (foldr f)
-                    (lambda (list-obj Object) -> Object ; TODO change to obj
-                      (lambda (acc String) -> String
+#;(check-interp '((def-rec (foldr f (String -> ((Obj) -> (Obj))))
+                  -> ((Obj) -> ((Obj) -> (Obj)))
+                    (lambda (list-obj (Obj)) -> ((Obj) -> (Obj))
+                      (lambda (acc (Obj)) -> (Obj)
                         (if-empty
                          list-obj
                          acc
                          ((f (get list-obj "first"))
                           (((foldr f) (get list-obj "rest")) acc))))))
-                  ((lambda (orig String) -> String
+                  ((lambda (orig (Obj)) -> (Obj)
                      (((foldr
-                        (lambda (x)
-                          (lambda (acc)
+                        (lambda (x String) -> ((Obj) -> (Obj))
+                          (lambda (acc (Obj)) -> (Obj)
                             (ext acc (((cat "my") x) : (get orig x))))))
                        (names orig))
                       (obj)))

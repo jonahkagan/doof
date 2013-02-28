@@ -35,7 +35,10 @@
     ; Width-based subtyping for objects
     ; (could add depth also, but not necessary yet)
     [(cons (t-obj fields1) (t-obj fields2))
-     (andmap (lambda: ([f : t-field]) (member? f fields1))
+     (andmap (lambda: ([f1 : t-field])
+               (match (fields-get fields1 (t-field-name f1))
+                 [(Some t2) (subtype? (t-field-value f1) t2)]  
+                 [(None) false]))
              fields2)]
     [_ false]))
 
@@ -60,21 +63,13 @@
        [(None) (err "Unbound id: ~a" id)]
        [(Some t) t])]
     
-    #;[(s-prim name arg)
-     (match (tc-prim name)
-       [(t-arrow argt rett)
-        (cond
-          [(subtype? (tc arg env) argt) rett]
-          [else (err "prim ~a: arg is wrong type" name)])])]
-    
     [(s-lam type arg body)
      (match type
        [(t-arrow argt rett)
+        (define bodyt (tc body (extend-env (bind arg argt) env)))
         (cond
-          [(subtype? (tc body (extend-env (bind arg argt) env))
-                     rett)
-           (t-arrow argt rett)]
-          [else (err "lambda type mismatch")])])]
+          [(subtype? bodyt rett) (t-arrow argt rett)]
+          [else (err "lambda type mismatch: ~a ~a" rett bodyt)])])]
     
     [(s-rec name lam rest)
      (define rec-env (extend-env (bind name (s-lam-type lam)) env))

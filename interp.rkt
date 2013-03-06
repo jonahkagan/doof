@@ -6,7 +6,7 @@
 (require racket/match)
 (require "ast.rkt")
 
-(define exposed-prims '(cat names))
+(define exposed-prims '(cat))
 
 (define extend-env #{poly-extend-env @ Value})
 
@@ -36,23 +36,8 @@
     [(s-lam _ arg body)
      (v-clos arg body env)]
     
-    [(s-rec name lam rest)
-     (define: rec-binding : (binding Value) (bind name (v-str "dummy")))
-     (define rec-env (extend-env rec-binding env))
-     (define clos (interp lam rec-env))
-     (match clos
-       [(v-clos _ _ _)
-        (set-binding-value! rec-binding clos)
-        (interp rest rec-env)]
-       [_ (err "rec: somehow got a non-function")])]
-    
     [(s-app fun arg)
-     (match (interp fun env)
-       [(v-clos carg cbody cenv)
-        (interp cbody
-                (extend-env (bind carg (interp arg env)) cenv))]
-       [(v-prim name) (apply-prim name (interp arg env) env)]
-       [else (err "can't apply non-function value")])]
+     (app (interp fun env) (interp arg env) env)]
     
     [(s-obj)
      (v-obj empty)]
@@ -77,17 +62,28 @@
           [_ (err "ext: field name must be a string")])]
        [_ (err "ext: expected object")])]
     
-    [(s-if-empty obj then else)
+    [(s-fold fun acc obj)
+     (define funv (interp fun env))
      (match (interp obj env)
-       [(v-obj fields) 
-        (cond
-          [(empty? fields)
-           (interp then env)]
-          [else (interp else env)])]
-       [_ (err "if-empty: expected object")])]
+       [(v-obj fields)
+        (foldr (lambda: ([f : field] [accv : Value])
+                 (app (app (app funv (v-str (field-name f)) env)
+                           (field-value f) env)
+                      accv env))
+               (interp acc env)
+               fields)]
+       [_ (err "fold: expected object")])]
     ))
 
-(define: (apply-prim [name : Symbol] [arg : Value] [env : Env]): Value
+(define: (app [clos : Value] [arg : Value] [env : Env]) : Value
+  (match clos
+    [(v-clos carg cbody cenv)
+     (interp cbody
+             (extend-env (bind carg arg) cenv))]
+    [(v-prim name) (app-prim name arg env)]
+    [else (err "can't apply non-function value")]))
+
+(define: (app-prim [name : Symbol] [arg : Value] [env : Env]): Value
   (case name
     ; Bit of a trick to make cat a one arg lambda that will be curried
     ; with the first string. We create a closure and bind the first string
@@ -107,11 +103,6 @@
            (v-str (string-append s1 s2))]
           [_ (err "cat: expected string as second arg")])]
        [_ (err "cat: expected string as first arg")])]
-    [(names)
-     (match arg
-       [(v-obj fields)
-        (list->doof-list (map v-str (fields-names fields)))]
-       [_ (err "names: expected object")])]
     [else (err "unknown prim: ~a" name)]))
 
 ; Object field helpers
@@ -129,19 +120,6 @@
         (filter (lambda: ([f : field])
                   (not (equal? (field-name f) name)))
                 fields)))
-
-(define: (fields-names [fields : (Listof field)]) : (Listof String)
-  (map field-name fields))
-
-; Constructs an object representing a list that has a first and rest field.
-; The empty list is just an empty object.
-(define: (list->doof-list [vals : (Listof Value)]) : Value
-  (foldr
-   (lambda: ([val : Value] [obj : Value])
-     (v-obj (list (field "first" val)
-                  (field "rest" obj))))
-   (v-obj empty)
-   vals))
 
 (define: (value->string [v : Value]) : String
   (match v

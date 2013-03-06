@@ -32,8 +32,7 @@
      (subpat? s1 s2)]
     [(cons (t-arrow arg1 ret1) (t-arrow arg2 ret2))
      (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
-    ; Width-based subtyping for objects
-    ; (could add depth also, but not necessary yet)
+    ; Width- and depth-based subtyping for objects
     [(cons (t-obj fields1) (t-obj fields2))
      (andmap (lambda: ([f1 : t-field])
                (match (fields-get fields1 (t-field-name f1))
@@ -71,11 +70,6 @@
           [(subtype? bodyt rett) (t-arrow argt rett)]
           [else (err "lambda type mismatch: ~a ~a" rett bodyt)])])]
     
-    [(s-rec name lam rest)
-     (define rec-env (extend-env (bind name (s-lam-type lam)) env))
-     (tc lam rec-env)
-     (tc rest rec-env)]
-    
     [(s-app fun arg)
      (match (tc fun env)
        [(t-arrow argt rett)
@@ -106,11 +100,7 @@
           [_ (err "ext: expected string for field name")])]
        [_ (err "ext: expected obj")])]
     
-    [(s-if-empty obj then else)
-     (match (tc obj env)
-       [(t-obj empty) (tc then env)]
-       [(t-obj _) (tc else env)]
-       [_ (err "if-empty: expected obj")])]
+    [(s-fold fun acc obj) (t-str (pat-str "fail"))]
     ))
 
 ; For now, copied these from interp. Object get/ext will be well-typed

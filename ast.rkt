@@ -9,8 +9,7 @@
 ;(define-predicate sexp? Sexp))
 
 ; Syntax
-(define-type Expr (U s-str s-id s-lam s-app s-obj s-get s-ext
-                     s-if-empty s-rec))
+(define-type Expr (U s-str s-id s-lam s-app s-obj s-get s-ext s-fold))
 
 (struct: s-str ([str : String]) #:transparent)
 (struct: s-id ([id : Symbol]) #:transparent)
@@ -20,9 +19,7 @@
 (struct: s-obj () #:transparent)
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
-(struct: s-if-empty ([obj : Expr] [then : Expr] [else : Expr])
-  #:transparent)
-(struct: s-rec ([name : Symbol] [fun : s-lam] [rest : Expr]) #:transparent)
+(struct: s-fold ([fun : Expr] [acc : Expr] [obj : Expr]) #:transparent)
 
 ; Values
 (define-type Value (U v-str v-clos v-prim v-obj))

@@ -22,9 +22,7 @@
   (list
    (bind 'cat (t-arrow str (t-arrow str str)))
    (bind 'cat2 (t-arrow str str))
-   ; We'll need a more specific type for names eventually
-   (bind 'names (t-arrow (t-obj empty) (t-obj empty)))
-    ))
+   ))
 
 (define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
   (match (cons t1 t2)
@@ -46,7 +44,7 @@
     [(cons (pat-str p1) (pat-str p2)) (equal? p1 p2)]
     [(cons _ (pat-all)) true]
     [_ false]))
-          
+
 (define: (tc-expr [e : Expr]) : Type
   (tc e initial-env))
 
@@ -100,7 +98,20 @@
           [_ (err "ext: expected string for field name")])]
        [_ (err "ext: expected obj")])]
     
-    [(s-fold fun acc obj) (t-str (pat-str "fail"))]
+    [(s-fold fun acc obj)
+     (match (tc obj env)
+       [(t-obj fields)
+        (match (tc fun env)
+          [(t-arrow namet (t-arrow valt (t-arrow acct rett)))
+           (cond
+             [(not (equal? namet str))
+              (err "fold: first lambda must take Strings")]
+             ; Should have a case ensuring second lambda accepts same type as obj values
+             [(not (subtype? (tc acc env) acct))
+              (err "fold: third lambda arg does not match type of initial accumulator")]
+             [else rett])]
+          [_ (err "fold: expected triply nested lambda")])]
+       [_ (err "fold: expected object")])]
     ))
 
 ; For now, copied these from interp. Object get/ext will be well-typed

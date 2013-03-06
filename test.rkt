@@ -19,7 +19,7 @@
 
 (define (check-interp sexpr val)
   (define e (parse sexpr))
-  ;(check-not-exn (lambda () (tc e)))
+  (check-not-exn (lambda () (tc e)))
   (check-equal? (interp e) val))
 
 (define (check-interp-exn sexpr)

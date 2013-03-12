@@ -6,7 +6,7 @@
 (require racket/match)
 (require "ast.rkt")
 
-(define exposed-prims '(cat))
+;(define exposed-prims '(cat))
 
 (define extend-env #{poly-extend-env @ Value})
 
@@ -16,13 +16,7 @@
 
 ; Interpreter
 (define: (interp-expr [e : Expr]) : Value
-  (interp e initial-env))
-
-(define: initial-env : Env
-  (foldl (lambda: ([name : Symbol] [env : Env])
-           (extend-env (bind name (v-prim name)) env))
-         mt-env
-         exposed-prims))
+  (interp e mt-env))
 
 (define: (interp [e : Expr] [env : Env]) : Value
   (match e
@@ -38,6 +32,14 @@
     
     [(s-app fun arg)
      (app (interp fun env) (interp arg env) env)]
+    
+    [(s-cat e1 e2)
+     (match (interp e1 env)
+       [(v-str s1)
+        (match (interp e2 env)
+          [(v-str s2) (v-str (string-append s1 s2))]
+          [_ (err "cat: expected string as second arg")])]
+       [_ (err "cat: expected string as first arg")])]
     
     [(s-obj)
      (v-obj empty)]
@@ -80,30 +82,7 @@
     [(v-clos carg cbody cenv)
      (interp cbody
              (extend-env (bind carg arg) cenv))]
-    [(v-prim name) (app-prim name arg env)]
     [else (err "can't apply non-function value")]))
-
-(define: (app-prim [name : Symbol] [arg : Value] [env : Env]): Value
-  (case name
-    ; Bit of a trick to make cat a one arg lambda that will be curried
-    ; with the first string. We create a closure and bind the first string
-    ; in its env as s1. Then we call cat2, which knows to look up s1 in the
-    ; env which is passed into the call to prim.
-    [(cat)
-     (v-clos 's2
-             (s-app (s-id 'cat2) (s-id 's2))
-             (extend-env (bind 's1 arg) 
-                         (extend-env (bind 'cat2 (v-prim 'cat2))
-                                     mt-env)))]
-    [(cat2)
-     (match (lookup 's1 env)
-       [(Some (v-str s1))
-        (match arg
-          [(v-str s2)
-           (v-str (string-append s1 s2))]
-          [_ (err "cat: expected string as second arg")])]
-       [_ (err "cat: expected string as first arg")])]
-    [else (err "unknown prim: ~a" name)]))
 
 ; Object field helpers
 (define: (fields-get [fields : (Listof field)] [name : String])

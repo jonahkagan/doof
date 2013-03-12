@@ -14,30 +14,27 @@
 (define (err msg . vals)
   (apply error 'tc msg vals))
 
-(define extend-env #{poly-extend-env @ Type})
+(define extend-env #{poly-extend-env @ TyValue})
 
-(define str (t-str (pat-all)))
+(define str (tv-str (pat-all)))
 
-(define: prim-types : (Listof (binding Type))
-  (list
-   (bind 'cat (t-arrow str (t-arrow str str)))
-   (bind 'cat2 (t-arrow str str))
-   ))
 
-(define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
-  (match (cons t1 t2)
-    [(cons (t-str s1) (t-str s2))
+(define: (subtype? [t1 : TyValue] [t2 : TyValue]) : Boolean
+  (match* (t1 t2)
+    [((tv-str s1) (tv-str s2))
      (subpat? s1 s2)]
-    [(cons (t-arrow arg1 ret1) (t-arrow arg2 ret2))
+    [((tv-arrow arg1 ret1) (tv-arrow arg2 ret2))
      (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
+    #|
     ; Width- and depth-based subtyping for objects
-    [(cons (t-obj fields1) (t-obj fields2))
+    [((tv-obj fields1) (tv-obj fields2))
      (andmap (lambda: ([f1 : t-field])
                (match (fields-get fields1 (t-field-name f1))
                  [(Some t2) (subtype? (t-field-value f1) t2)]  
                  [(None) false]))
              fields2)]
-    [_ false]))
+|#    
+    [(_ _) false]))
 
 (define: (subpat? [p1 : Pat] [p2 : Pat]) : Boolean
   (match (cons p1 p2)
@@ -45,37 +42,73 @@
     [(cons _ (pat-all)) true]
     [_ false]))
 
-(define: (tc-expr [e : Expr]) : Type
-  (tc e initial-env))
-
-(define: initial-env : TyEnv
-  (foldl extend-env mt-env prim-types))
-
-(define: (tc [e : Expr] [env : TyEnv]) : Type
+(define: (ty-interp [e : TyExpr] [env : TyEnv]) : TyValue
   (match e
-    [(s-str s) (t-str (pat-str s))]
+    [(ts-str s) (tv-str s)]
+    
+    [(ts-id id)
+     (match (lookup id env)
+       [(None) (err "Unbound type id: ~a" id)]
+       [(Some t) t])]
+    
+    [(ts-arrow arg ret)
+     (tv-arrow (ty-interp arg env)
+               (ty-interp ret env))]
+    
+    [(ts-lam arg body)
+     (tv-clos arg body env)]
+    
+    [(ts-app fun arg)
+     (match (ty-interp fun env)
+       [(tv-clos carg cbody cenv)
+        (ty-interp cbody
+                   (extend-env (bind carg (ty-interp arg env)) cenv))]
+       [_ (err "Can't apply non- type operator")])]
+    ))
+
+(define: (tc-expr [e : Expr]) : TyValue
+  (tc e mt-env))
+
+(define: (tc [e : Expr] [env : TyEnv]) : TyValue
+  (match e
+    [(s-str s) (tv-str (pat-str s))]
     
     [(s-id id)
      (match (lookup id env)
        [(None) (err "Unbound id: ~a" id)]
        [(Some t) t])]
     
-    [(s-lam type arg body)
-     (match type
-       [(t-arrow argt rett)
+    [(s-lam ty-e arg body)
+     (define lam-ty (ty-interp ty-e mt-env))
+     (match lam-ty
+       [(tv-arrow argt rett)
         (define bodyt (tc body (extend-env (bind arg argt) env)))
         (cond
-          [(subtype? bodyt rett) (t-arrow argt rett)]
-          [else (err "lambda type mismatch: ~a ~a" rett bodyt)])])]
+          [(subtype? bodyt rett) (tv-arrow argt rett)]
+          [else (err "lambda type mismatch: ~a ~a" rett bodyt)])]
+       ; We can't check whether the body has the proper type since
+       ; we can't evaluate the closure until the lambda is applied.
+       [(tv-clos _ _ _) lam-ty]
+       [_ (err "(impossible) got a non-function type for lambda")])]
+    
     
     [(s-app fun arg)
      (match (tc fun env)
-       [(t-arrow argt rett)
+       [(tv-arrow argt rett)
         (cond
           [(subtype? (tc arg env) argt) rett]
           [else (err "function type did not match arg type")])]
+       ;[(tv-clos carg cbody cenv)
        [_ (err "can't apply non-function")])]
     
+    [(s-cat e1 e2)
+     (match (tc e1 env)
+       [(tv-str s1)
+        (match (tc e2 env)
+          [(tv-str s2) (tv-str (pat-cat s1 s2))]
+          [_ (err "cat: expected string as second arg")])]
+       [_ (err "cat: expected string as first arg")])]
+    #|    
     [(s-obj) (t-obj empty)]
     
     [(s-get obj field)
@@ -100,7 +133,7 @@
     
     [(s-fold fun acc obj)
      (match (tc obj env)
-       [(t-obj fields)
+       [(tv-obj fields)
         (match (tc fun env)
           [(t-arrow namet (t-arrow valt (t-arrow acct rett)))
            (cond
@@ -112,8 +145,9 @@
              [else rett])]
           [_ (err "fold: expected triply nested lambda")])]
        [_ (err "fold: expected object")])]
+|#
     ))
-
+#|
 ; For now, copied these from interp. Object get/ext will be well-typed
 ; only when the given field name is a singleton string.
 (define: (fields-get [fields : (Listof t-field)] [name : Pat])
@@ -130,5 +164,6 @@
         (filter (lambda: ([f : t-field])
                   (not (pat-equal? (t-field-name f) name)))
                 fields)))
+|#
 
 (define pat-equal? equal?)

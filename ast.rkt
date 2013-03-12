@@ -9,24 +9,24 @@
 ;(define-predicate sexp? Sexp))
 
 ; Syntax
-(define-type Expr (U s-str s-id s-lam s-app s-obj s-get s-ext s-fold))
+(define-type Expr (U s-str s-id s-lam s-app s-cat s-obj s-get s-ext s-fold))
 
 (struct: s-str ([str : String]) #:transparent)
 (struct: s-id ([id : Symbol]) #:transparent)
-(struct: s-lam ([type : t-arrow] [arg : Symbol] [body : Expr])
+(struct: s-lam ([type : TyExpr] [arg : Symbol] [body : Expr])
   #:transparent)
 (struct: s-app ([fun : Expr] [arg : Expr]) #:transparent)
+(struct: s-cat ([arg1 : Expr] [arg2 : Expr]))
 (struct: s-obj () #:transparent)
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
 (struct: s-fold ([fun : Expr] [acc : Expr] [obj : Expr]) #:transparent)
 
 ; Values
-(define-type Value (U v-str v-clos v-prim v-obj))
+(define-type Value (U v-str v-clos v-obj))
 
 (struct: v-str ([str : String]) #:transparent)
 (struct: v-clos ([arg : Symbol] [body : Expr] [env : Env]) #:transparent)
-(struct: v-prim ([name : Symbol]) #:transparent)
 (struct: v-obj ([fields : (Listof field)]) #:transparent)
 
 (struct: field ([name : String] [value : Value]) #:transparent)
@@ -37,23 +37,31 @@
 
 (define-type Env (Envof Value))
 
-; Types
-(define-type Type (U t-str t-arrow t-obj))
+; Syntax for types
+(define-type TyExpr (U ts-str ts-id ts-arrow ts-lam ts-app))
 
-(struct: t-str ([pat : Pat]) #:transparent)
-(struct: t-arrow ([arg : Type] [ret : Type]) #:transparent)
-(struct: t-obj ([fields : (Listof t-field)]) #:transparent)
+(struct: ts-str ([pat : Pat]) #:transparent)
+(struct: ts-id ([id : Symbol]) #:transparent)
+(struct: ts-arrow ([arg : TyExpr] [ret : TyExpr]) #:transparent)
+(struct: ts-lam ([arg : Symbol] [body : TyExpr]) #:transparent)
+(struct: ts-app ([fun : TyExpr] [arg : TyExpr]) #:transparent)
 
-(struct: t-field ([name : Pat] [value : Type]) #:transparent)
+; Types ("values" of the type language)
+(define-type TyValue (U tv-str tv-arrow tv-clos))
 
-; String patterns
-(define-type Pat (U pat-str pat-all))
-
-(struct: pat-str [(str : String)] #:transparent)
-(struct: pat-all () #:transparent)
+(struct: tv-str ([pat : Pat]) #:transparent)
+(struct: tv-arrow ([arg : TyValue] [ret : TyValue]) #:transparent)
+(struct: tv-clos ([arg : Symbol] [body : TyExpr] [env : TyEnv]) #:transparent)
 
 ; Type environment
-(define-type TyEnv (Envof Type))
+(define-type TyEnv (Envof TyValue))
+
+; String patterns
+(define-type Pat (U pat-str pat-cat pat-all))
+
+(struct: pat-str [(str : String)] #:transparent)
+(struct: pat-cat [(s1 : Pat) (s2 : Pat)] #:transparent)
+(struct: pat-all () #:transparent)
 
 ; Environment helpers
 (define mt-env empty)

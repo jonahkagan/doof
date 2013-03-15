@@ -92,6 +92,9 @@
        [_ (err "can't apply non-function")])]
     
     [(s-ty-lam arg body)
+     ; Here we should be checking that the body is well-typed with arg
+     ; in the context (though w/o arg being assigned any specific type).
+     ; Right now we are incorrect for unapplied ty-lambdas.
      (tv-all arg body env)]
     
     [(s-ty-app fun arg)

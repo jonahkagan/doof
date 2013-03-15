@@ -41,7 +41,7 @@
        [`(,fun ,arg)
         (s-app (parse fun) (parse arg))]
        
-       [`(,fun ! ,arg)
+       [`(,fun @ ,arg)
         (s-ty-app (parse fun) (parse-type arg))]
        
        [_ (error "bad parse" se)])]

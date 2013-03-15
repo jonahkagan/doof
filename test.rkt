@@ -186,39 +186,39 @@
           (tv-str (pat-str "doofus")))
 |#
 
-(check-tc '((ty-lambda (X) "s") ! String)
+(check-tc '((ty-lambda (X) "s") @ String)
           s)
-(check-tc '((ty-lambda (X) ((lambda (x :: X) -> X x) "s")) ! String)
+(check-tc '((ty-lambda (X) ((lambda (x :: X) -> X x) "s")) @ String)
           str)
-(check-tc '(((ty-lambda (X) (lambda (x :: X) -> X x)) ! String) "s")
+(check-tc '(((ty-lambda (X) (lambda (x :: X) -> X x)) @ String) "s")
           str)
 (check-tc '(((ty-lambda (X) (lambda (f :: (X -> X)) -> (X -> X)
                              (lambda (x :: X) -> X
                                (f (f x)))))
-            ! String) (lambda (a :: String) -> String a))
+            @ String) (lambda (a :: String) -> String a))
           (tv-arrow str str))
 
 (check-tc '(((ty-lambda (T)
                         (lambda (a :: T) -> (T -> T)
                           (lambda (b :: T) -> T
                             b)))
-             ! "s") "s")
+             @ "s") "s")
           (tv-arrow s s))
 (check-tc-exn '(((ty-lambda (T)
                             (lambda (a :: T) -> (T -> T)
                               (lambda (b :: T) -> T
                                 "x")))
-                 ! "s") "s"))
+                 @ "s") "s"))
 (check-tc '(((ty-lambda (T)
                         (lambda (a :: T) -> (T -> T)
                           (lambda (b :: T) -> T
                             b)))
-             ! String) "s")
+             @ String) "s")
           (tv-arrow str str))
 
 (check-tc '(((ty-lambda (T)
               (ty-lambda (S) (lambda (x :: S) -> T x)))
-            ! String) ! String)
+            @ String) @ String)
           (tv-arrow str str))
 
 
@@ -254,7 +254,7 @@
               dodo)
 
 (check-interp '(((ty-lambda (X) (lambda (x :: X) -> X x))
-                 ! "doofus") "doofus")
+                 @ "doofus") "doofus")
               doofus)
 
 #|

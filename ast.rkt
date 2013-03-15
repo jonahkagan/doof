@@ -9,11 +9,13 @@
 ;(define-predicate sexp? Sexp))
 
 ; Syntax
-(define-type Expr (U s-str s-id s-lam s-app s-cat s-obj s-get s-ext s-fold))
+(define-type Expr (U s-str s-id s-lam s-app s-cat
+                     s-obj s-get s-ext s-fold
+                     s-ty-lam s-ty-app))
 
 (struct: s-str ([str : String]) #:transparent)
 (struct: s-id ([id : Symbol]) #:transparent)
-(struct: s-lam ([type : TyExpr] [arg : Symbol] [body : Expr])
+(struct: s-lam ([type : ts-arrow] [arg : Symbol] [body : Expr])
   #:transparent)
 (struct: s-app ([fun : Expr] [arg : Expr]) #:transparent)
 (struct: s-cat ([arg1 : Expr] [arg2 : Expr]))
@@ -21,6 +23,8 @@
 (struct: s-get ([obj : Expr] [field : Expr]) #:transparent)
 (struct: s-ext ([obj : Expr] [field : Expr] [val : Expr]) #:transparent)
 (struct: s-fold ([fun : Expr] [acc : Expr] [obj : Expr]) #:transparent)
+(struct: s-ty-lam ([arg : Symbol] [body : Expr]) #:transparent)
+(struct: s-ty-app ([fun : Expr] [arg : TyExpr]) #:transparent)
 
 ; Values
 (define-type Value (U v-str v-clos v-obj))
@@ -38,20 +42,21 @@
 (define-type Env (Envof Value))
 
 ; Syntax for types
-(define-type TyExpr (U ts-str ts-id ts-arrow ts-lam ts-app))
+(define-type TyExpr (U ts-str ts-id ts-arrow))
 
 (struct: ts-str ([pat : Pat]) #:transparent)
 (struct: ts-id ([id : Symbol]) #:transparent)
 (struct: ts-arrow ([arg : TyExpr] [ret : TyExpr]) #:transparent)
-(struct: ts-lam ([arg : Symbol] [body : TyExpr]) #:transparent)
-(struct: ts-app ([fun : TyExpr] [arg : TyExpr]) #:transparent)
+;(struct: ts-lam ([arg : Symbol] [body : TyExpr]) #:transparent)
+;(struct: ts-app ([fun : TyExpr] [arg : TyExpr]) #:transparent)
 
 ; Types ("values" of the type language)
-(define-type TyValue (U tv-str tv-arrow tv-clos))
+(define-type TyValue (U tv-str tv-arrow tv-all))
 
 (struct: tv-str ([pat : Pat]) #:transparent)
 (struct: tv-arrow ([arg : TyValue] [ret : TyValue]) #:transparent)
-(struct: tv-clos ([arg : Symbol] [body : TyExpr] [env : TyEnv]) #:transparent)
+(struct: tv-all ([arg : Symbol] [body : Expr]) #:transparent)
+;(struct: tv-clos ([arg : Symbol] [body : TyExpr] [env : TyEnv]) #:transparent)
 
 ; Type environment
 (define-type TyEnv (Envof TyValue))

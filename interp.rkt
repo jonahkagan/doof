@@ -33,6 +33,9 @@
     [(s-app fun arg)
      (app (interp fun env) (interp arg env) env)]
     
+    [(s-ty-lam _ body) (interp body env)]
+    [(s-ty-app fun _) (interp fun env)]
+    
     [(s-cat e1 e2)
      (match (interp e1 env)
        [(v-str s1)

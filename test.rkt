@@ -36,8 +36,8 @@
 
 ; Parse tests
 
-(define str (ts-str (pat-all)))
-(define s (ts-str (pat-str "s")))
+(define tstr (ts-str (pat-all)))
+(define ts (ts-str (pat-str "s")))
 
 (check-parse '"doofus" (s-str "doofus"))
 (check-parse 'doofid (s-id 'doofid))
@@ -50,18 +50,18 @@
               (s-str "there")))
 
 (check-parse '(lambda (x :: "s") -> "s" x)
-             (s-lam (ts-arrow s s)
+             (s-lam (ts-arrow ts ts)
                     'x (s-id 'x)))
 (check-parse '(lambda (y :: String) -> String "why")
-             (s-lam (ts-arrow str str)
+             (s-lam (ts-arrow tstr tstr)
                     'y (s-str "why")))
 (check-parse '(lambda (x :: ("s" -> String)) -> ("s" -> String) x)
-             (s-lam (ts-arrow (ts-arrow s str)
-                              (ts-arrow s str))
+             (s-lam (ts-arrow (ts-arrow ts tstr)
+                              (ts-arrow ts tstr))
                     'x (s-id 'x)))
 
 (check-parse '((lambda (x :: String) -> String x) "ecks")
-             (s-app (s-lam (ts-arrow str str)
+             (s-app (s-lam (ts-arrow tstr tstr)
                            'x (s-id 'x))
                     (s-str "ecks")))
 
@@ -90,21 +90,16 @@
 
 (check-parse '(fold (lambda (x :: String) -> String x)
                     "" o)
-             (s-fold (s-lam (ts-arrow str str)
+             (s-fold (s-lam (ts-arrow tstr tstr)
                             'x (s-id 'x))
                      (s-str "")
                      (s-id 'o)))
 
-(check-parse '(lambda (x :: X) -> X x)
-             (s-lam (ts-lam 'X (ts-arrow (ts-id 'X) (ts-id 'X)))
-                    'x (s-id 'x)))
-(check-parse '(lambda (x :: X) -> (String -> X) x)
-             (s-lam (ts-lam 'X (ts-arrow (ts-id 'X)
-                                         (ts-arrow str (ts-id 'X))))
-                    'x (s-id 'x)))
-
 
 ; Type checking tests
+
+(define str (tv-str (pat-all)))
+(define s (tv-str (pat-str "s")))
 
 (check-tc-exn 'unbound)
 
@@ -145,17 +140,92 @@
             (t-str (pat-str "doof")))
 
 ; Type functions
+
 #|
-(check-tc '((lambda (x String) -> x x) "doofus")
-          (t-str (pat-str "doofus")))
+
+  (tλ T .
+    (λ a :: T .    
+      λ b :: T .
+        "x")) :: V T . T -> (oλ X . X -> X) T
+  ["str"] "str"
+  ; would be well-typed if ["str"] were [String]
+
+  ; error
+'((ty-lambda (T)
+    (lambda (a :: T) -> (op-lambda (X) (X -> X)) T
+      ; this is weird, because it's already in the body of the op-lambda
+      (lambda (b :: T) -> T
+        "x")))
+  ["str"] "str")
+
+; succeed
+(ty-lambda (T)
+  (lambda (x :: T) -> (op-lambda (X) (cat-ty "my" X)) T
+    (cat "my" x)))
+["str"] "str"
+=> "mystr" :: "mystr"
+  
+; succeed
+(ty-lambda (T)
+  (lambda (x :: T) -> (cat-ty "my" T)
+    (cat "my" x)))
+["str"] "str"
+
+
+λ a :: (oλ T . T -> T).
+  λ b :: (
+
+'((lambda (a :: T) -> (T -> T)
+    (lambda (b :: S) -> S
+      "x"))
+  "str")
+
+
+
+(check-tc '((lambda (x :: X) -> X x) "doofus")
+          (tv-str (pat-str "doofus")))
+|#
+
+(check-tc '((ty-lambda (X) "s") ! String)
+          s)
+(check-tc '((ty-lambda (X) ((lambda (x :: X) -> X x) "s")) ! String)
+          str)
+(check-tc '(((ty-lambda (X) (lambda (x :: X) -> X x)) ! String) "s")
+          str)
+(check-tc '(((ty-lambda (X) (lambda (f :: (X -> X)) -> (X -> X)
+                             (lambda (x :: X) -> X
+                               (f (f x)))))
+            ! String) (lambda (a :: String) -> String a))
+          (tv-arrow str str))
+
+(check-tc '(((ty-lambda (T)
+                        (lambda (a :: T) -> (T -> T)
+                          (lambda (b :: T) -> T
+                            b)))
+             ! "s") "s")
+          (tv-arrow s s))
+(check-tc-exn '(((ty-lambda (T)
+                            (lambda (a :: T) -> (T -> T)
+                              (lambda (b :: T) -> T
+                                "x")))
+                 ! "s") "s"))
+(check-tc '(((ty-lambda (T)
+                        (lambda (a :: T) -> (T -> T)
+                          (lambda (b :: T) -> T
+                            b)))
+             ! String) "s")
+          (tv-arrow str str))
+
+
 ;(check-tc-exn '((lambda (x (Obj)) -> x x) "doofus"))
-(check-tc '((lambda (x String) -> (cat "doof" x)
+#|
+(check-tc '((lambda (x :: String) -> (cat "doof" x)
               ((cat "doof") x))
             "us")
-          (t-str (pat-str "doofus")))
-(check-tc-exn '((lambda (x "doofus") -> x x)
-                ((lambda (x String) -> (cat "doof" x) ((cat "doof") x))
-                 ((lambda (x String) -> String x) "us"))))
+          (tv-str (pat-str "doofus")))
+(check-tc-exn '((lambda (x :: "doofus") -> x x)
+                ((lambda (x :: String) -> (cat "doof" x) ((cat "doof") x))
+                 ((lambda (x :: String) -> String x) "us"))))
 |#
 
 ; Interp tests
@@ -177,6 +247,10 @@
                    (lambda (x :: String) -> String x))
                  "shadowed") "dodo")
               dodo)
+
+(check-interp '(((ty-lambda (X) (lambda (x :: X) -> X x))
+                 ! "doofus") "doofus")
+              doofus)
 
 #|
 (define o1 (v-obj (list (field "doofus" dodo))))

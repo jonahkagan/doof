@@ -13,10 +13,16 @@
      (match se
        [`(lambda (,arg :: ,t-arg) -> ,t-body ,body)
         (cond
-          [(symbol? arg) 
-           (s-lam (parse-lam-type t-arg t-body)
+          [(symbol? arg)
+           (s-lam (ts-arrow (parse-type t-arg) (parse-type t-body))
                   arg (parse body))]
           [else (error "lambda arg not a symbol")])]
+       
+       [`(ty-lambda (,arg) ,body)
+        (cond
+          [(symbol? arg)
+           (s-ty-lam arg (parse body))]
+          [else (error "ty-lambda arg not a symbol")])]
        
        [`(obj) (s-obj)]
        
@@ -35,14 +41,11 @@
        [`(,fun ,arg)
         (s-app (parse fun) (parse arg))]
        
+       [`(,fun ! ,arg)
+        (s-ty-app (parse fun) (parse-type arg))]
+       
        [_ (error "bad parse" se)])]
     [else (error "bad parse" se)]))
-
-(define: (parse-lam-type [se-arg : Any] [se-body : Any]) : TyExpr
-  (match (parse-type se-arg)
-    [(ts-id id)
-     (ts-lam id (ts-arrow (ts-id id) (parse-type se-body)))]
-    [arg-t (ts-arrow arg-t (parse-type se-body))]))
 
 (define: (parse-type [se : Any]) : TyExpr
   (cond

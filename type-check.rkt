@@ -55,15 +55,11 @@
      (tv-arrow (ty-interp arg env)
                (ty-interp ret env))]
     
-    [(ts-lam arg body)
-     (tv-clos arg body env)]
+    ;[(ts-lam arg body)
+    ; (tv-clos arg body env)]
     
-    [(ts-app fun arg)
-     (match (ty-interp fun env)
-       [(tv-clos carg cbody cenv)
-        (ty-interp cbody
-                   (extend-env (bind carg (ty-interp arg env)) cenv))]
-       [_ (err "Can't apply non- type operator")])]
+    ;[(ts-app fun arg)
+    ; (ty-app (ty-interp fun env) (ty-interp arg env))]
     ))
 
 (define: (tc-expr [e : Expr]) : TyValue
@@ -78,19 +74,14 @@
        [(None) (err "Unbound id: ~a" id)]
        [(Some t) t])]
     
-    [(s-lam ty-e arg body)
-     (define lam-ty (ty-interp ty-e mt-env))
-     (match lam-ty
+    [(s-lam ty arg body)
+     (match (ty-interp ty env)
        [(tv-arrow argt rett)
         (define bodyt (tc body (extend-env (bind arg argt) env)))
         (cond
           [(subtype? bodyt rett) (tv-arrow argt rett)]
           [else (err "lambda type mismatch: ~a ~a" rett bodyt)])]
-       ; We can't check whether the body has the proper type since
-       ; we can't evaluate the closure until the lambda is applied.
-       [(tv-clos _ _ _) lam-ty]
        [_ (err "(impossible) got a non-function type for lambda")])]
-    
     
     [(s-app fun arg)
      (match (tc fun env)
@@ -98,8 +89,18 @@
         (cond
           [(subtype? (tc arg env) argt) rett]
           [else (err "function type did not match arg type")])]
-       ;[(tv-clos carg cbody cenv)
        [_ (err "can't apply non-function")])]
+    
+    [(s-ty-lam arg body)
+     (tv-all arg body)]
+    
+    [(s-ty-app fun arg)
+     (match (tc fun env)
+       [(tv-all arg-id body)
+        (tc body
+            (extend-env (bind arg-id (ty-interp arg env))
+                        env))]
+       [_ (err "can't apply non-universal to type")])]
     
     [(s-cat e1 e2)
      (match (tc e1 env)

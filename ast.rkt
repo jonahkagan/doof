@@ -55,7 +55,7 @@
 
 (struct: tv-str ([pat : Pat]) #:transparent)
 (struct: tv-arrow ([arg : TyValue] [ret : TyValue]) #:transparent)
-(struct: tv-all ([arg : Symbol] [body : Expr]) #:transparent)
+(struct: tv-all ([arg : Symbol] [body : Expr] [env : TyEnv]) #:transparent)
 ;(struct: tv-clos ([arg : Symbol] [body : TyExpr] [env : TyEnv]) #:transparent)
 
 ; Type environment

@@ -216,6 +216,11 @@
              ! String) "s")
           (tv-arrow str str))
 
+(check-tc '(((ty-lambda (T)
+              (ty-lambda (S) (lambda (x :: S) -> T x)))
+            ! String) ! String)
+          (tv-arrow str str))
+
 
 ;(check-tc-exn '((lambda (x (Obj)) -> x x) "doofus"))
 #|

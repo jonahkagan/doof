@@ -92,14 +92,14 @@
        [_ (err "can't apply non-function")])]
     
     [(s-ty-lam arg body)
-     (tv-all arg body)]
+     (tv-all arg body env)]
     
     [(s-ty-app fun arg)
      (match (tc fun env)
-       [(tv-all arg-id body)
+       [(tv-all arg-id body all-env)
         (tc body
             (extend-env (bind arg-id (ty-interp arg env))
-                        env))]
+                        all-env))]
        [_ (err "can't apply non-universal to type")])]
     
     [(s-cat e1 e2)

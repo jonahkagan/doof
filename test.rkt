@@ -36,8 +36,8 @@
 
 ; Parse tests
 
-(define tstr (ts-str (pat-all)))
-(define ts (ts-str (pat-str "s")))
+(define tstr (t-str (pat-all)))
+(define ts (t-str (pat-str "s")))
 
 (check-parse '"doofus" (s-str "doofus"))
 (check-parse 'doofid (s-id 'doofid))
@@ -50,18 +50,18 @@
               (s-str "there")))
 
 (check-parse '(lambda (x :: "s") -> "s" x)
-             (s-lam (ts-arrow ts ts)
+             (s-lam (t-arrow ts ts)
                     'x (s-id 'x)))
 (check-parse '(lambda (y :: String) -> String "why")
-             (s-lam (ts-arrow tstr tstr)
+             (s-lam (t-arrow tstr tstr)
                     'y (s-str "why")))
 (check-parse '(lambda (x :: ("s" -> String)) -> ("s" -> String) x)
-             (s-lam (ts-arrow (ts-arrow ts tstr)
-                              (ts-arrow ts tstr))
+             (s-lam (t-arrow (t-arrow ts tstr)
+                             (t-arrow ts tstr))
                     'x (s-id 'x)))
 
 (check-parse '((lambda (x :: String) -> String x) "ecks")
-             (s-app (s-lam (ts-arrow tstr tstr)
+             (s-app (s-lam (t-arrow tstr tstr)
                            'x (s-id 'x))
                     (s-str "ecks")))
 
@@ -82,15 +82,15 @@
                     (s-id 'last) (s-str "Us")))
 
 #;(check-parse '(lambda (o :: (Obj ("f" : String) ("g" : String))) -> String o)
-               (s-lam (ts-lam 'o (ts-arrow
-                                  (t-obj (list (t-field (pat-str "f") str)
-                                               (t-field (pat-str "g") str)))
-                                  str))
+               (s-lam (t-lam 'o (t-arrow
+                                 (t-obj (list (t-field (pat-str "f") str)
+                                              (t-field (pat-str "g") str)))
+                                 str))
                       'o (s-id 'o)))
 
 (check-parse '(fold (lambda (x :: String) -> String x)
                     "" o)
-             (s-fold (s-lam (ts-arrow tstr tstr)
+             (s-fold (s-lam (t-arrow tstr tstr)
                             'x (s-id 'x))
                      (s-str "")
                      (s-id 'o)))
@@ -98,8 +98,8 @@
 
 ; Type checking tests
 
-(define str (tv-str (pat-all)))
-(define s (tv-str (pat-str "s")))
+(define str (t-str (pat-all)))
+(define s (t-str (pat-str "s")))
 
 (check-tc-exn 'unbound)
 
@@ -183,27 +183,26 @@
 
 
 (check-tc '((lambda (x :: X) -> X x) "doofus")
-          (tv-str (pat-str "doofus")))
+          (t-tr (pat-str "doofus")))
 |#
 
 (check-tc '((ty-lambda (X) "s") @ String)
           s)
-(check-tc '((ty-lambda (X) ((lambda (x :: X) -> X x) "s")) @ String)
-          str)
 (check-tc '(((ty-lambda (X) (lambda (x :: X) -> X x)) @ String) "s")
           str)
+(check-tc-exn '((ty-lambda (X) ((lambda (x :: X) -> X x) "s")) @ String))
 (check-tc '(((ty-lambda (X) (lambda (f :: (X -> X)) -> (X -> X)
-                             (lambda (x :: X) -> X
-                               (f (f x)))))
-            @ String) (lambda (a :: String) -> String a))
-          (tv-arrow str str))
+                              (lambda (x :: X) -> X
+                                (f (f x)))))
+             @ String) (lambda (a :: String) -> String a))
+          (t-arrow str str))
 
 (check-tc '(((ty-lambda (T)
                         (lambda (a :: T) -> (T -> T)
                           (lambda (b :: T) -> T
                             b)))
              @ "s") "s")
-          (tv-arrow s s))
+          (t-arrow s s))
 (check-tc-exn '(((ty-lambda (T)
                             (lambda (a :: T) -> (T -> T)
                               (lambda (b :: T) -> T
@@ -214,20 +213,46 @@
                           (lambda (b :: T) -> T
                             b)))
              @ String) "s")
-          (tv-arrow str str))
+          (t-arrow str str))
+
+(check-tc '((((ty-lambda (T)
+                         (ty-lambda (T)
+                                    (lambda (x :: T) -> T x)))
+              @ "a") @ String) "b")
+          str)
+
+(check-tc-exn '((((ty-lambda (T)
+                             (ty-lambda (T)
+                                        (lambda (x :: T) -> T x)))
+                  @ String) @ "a") "b"))
 
 (check-tc '(((ty-lambda (T)
-              (ty-lambda (S) (lambda (x :: S) -> T x)))
-            @ String) @ String)
-          (tv-arrow str str))
+                        (ty-lambda (S)
+                                   (lambda (x :: S) -> (T -> S)
+                                     (lambda (y :: T) -> S x))))
+             @ String) @ String)
+          (t-arrow str (t-arrow str str)))
 
+(check-tc-exn '((ty-lambda (S) (lambda (x :: S) -> S x))
+                @ T))
+(check-tc '(ty-lambda (T) ((ty-lambda (S) (lambda (x :: S) -> S x)) @ T))
+          (t-all 'T (t-arrow (t-id 'T) (t-id 'T))))
+
+(check-tc '(ty-lambda (Z)
+                 ((ty-lambda (X)
+                             (ty-lambda (Z)
+                                        (lambda (a :: X) -> X a)))
+                  @ Z))
+          (t-all 'Z (t-all 'alpha1 (t-arrow (t-id 'Z) (t-id 'Z)))))
+
+(define t (lambda (e) (tc (parse e))))
 
 ;(check-tc-exn '((lambda (x (Obj)) -> x x) "doofus"))
 #|
 (check-tc '((lambda (x :: String) -> (cat "doof" x)
               ((cat "doof") x))
             "us")
-          (tv-str (pat-str "doofus")))
+          (t-str (pat-str "doofus")))
 (check-tc-exn '((lambda (x :: "doofus") -> x x)
                 ((lambda (x :: String) -> (cat "doof" x) ((cat "doof") x))
                  ((lambda (x :: String) -> String x) "us"))))

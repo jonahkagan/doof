@@ -14,20 +14,22 @@
 (define (err msg . vals)
   (apply error 'tc msg vals))
 
-(define extend-env #{poly-extend-env @ TyValue})
+(define extend-env #{poly-extend-env @ Type})
 
-(define str (tv-str (pat-all)))
+(define str (t-str (pat-all)))
 
 
-(define: (subtype? [t1 : TyValue] [t2 : TyValue]) : Boolean
+(define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
   (match* (t1 t2)
-    [((tv-str s1) (tv-str s2))
+    [((t-str s1) (t-str s2))
      (subpat? s1 s2)]
-    [((tv-arrow arg1 ret1) (tv-arrow arg2 ret2))
+    [((t-id id1) (t-id id2))
+     (equal? id1 id2)]
+    [((t-arrow arg1 ret1) (t-arrow arg2 ret2))
      (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
     #|
     ; Width- and depth-based subtyping for objects
-    [((tv-obj fields1) (tv-obj fields2))
+    [((t-obj fields1) (t-obj fields2))
      (andmap (lambda: ([f1 : t-field])
                (match (fields-get fields1 (t-field-name f1))
                  [(Some t2) (subtype? (t-field-value f1) t2)]  
@@ -42,7 +44,8 @@
     [(cons _ (pat-all)) true]
     [_ false]))
 
-(define: (ty-interp [e : TyExpr] [env : TyEnv]) : TyValue
+#|
+(define: (ty-interp [e : TyExpr] [env : TyEnv]) : Type
   (match e
     [(ts-str s) (tv-str s)]
     
@@ -61,13 +64,68 @@
     ;[(ts-app fun arg)
     ; (ty-app (ty-interp fun env) (ty-interp arg env))]
     ))
+|#
+(define n 0)
+(define: (replace [id : Symbol] [new-id : Symbol] [t : Type]) : Type
+  (match t
+    [(t-str _) t]
+    [(t-id id1) 
+     (cond
+       [(equal? id1 id) (t-id new-id)]
+       [else t])]
+    [(t-arrow arg ret)
+     (t-arrow (replace id new-id arg) (replace id new-id ret))]
+    [(t-all x body)
+     (cond
+       [(equal? x id) body]
+       [else (t-all x (replace id new-id body))])]))
+(define ty-alpha-conv
+  (lambda: ([t : Type])
+    (match t
+      [(t-all id t2)
+       (set! n (add1 n))
+       (define new-id (string->symbol (format "alpha~a" n)))
+       (t-all new-id (replace id new-id t2))]
+      [_ (error "alpha-conv only for t-all")])))
 
-(define: (tc-expr [e : Expr]) : TyValue
-  (tc e mt-env))
+(define: (ty-fv [t : Type]) : (Listof Symbol)
+  (match t
+    [(t-str _) empty]
+    [(t-id id) (list id)]
+    [(t-arrow arg ret) (append (ty-fv arg) (ty-fv ret))]
+    [(t-all id body) (remove* '(id) (ty-fv body))]))
 
-(define: (tc [e : Expr] [env : TyEnv]) : TyValue
+(define: (ty-subst [t : Type] [id : Symbol] [body : Type]) : Type
+  #|(cond
+    [(not (or (empty? (ty-fv body))
+          (equal? (ty-fv body) (list id))))
+          (err "can't subst into non-closed type")]
+    [else
+|#
+  (match body
+    [(t-str _) body]
+    
+    [(t-id id1)
+     (cond
+       [(equal? id1 id) t]
+       [else body])]
+    
+    [(t-arrow arg ret) (t-arrow (ty-subst t id arg)
+                                (ty-subst t id ret))]
+    
+    [(t-all id1 t2)
+     (cond
+       [(equal? id1 id) body]
+       [(member? id1 (ty-fv t)) (ty-subst t id (ty-alpha-conv body))]
+       [else (t-all id1 (ty-subst t id t2))])]
+    ))
+
+(define: (tc-expr [e : Expr]) : Type
+  (tc e mt-env empty))
+
+(define: (tc [e : Expr] [env : TyEnv] [ty-vars : (Listof Symbol)]) : Type
   (match e
-    [(s-str s) (tv-str (pat-str s))]
+    [(s-str s) (t-str (pat-str s))]
     
     [(s-id id)
      (match (lookup id env)
@@ -75,41 +133,43 @@
        [(Some t) t])]
     
     [(s-lam ty arg body)
-     (match (ty-interp ty env)
-       [(tv-arrow argt rett)
-        (define bodyt (tc body (extend-env (bind arg argt) env)))
+     (match ty
+       [(t-arrow argt rett)
+        (define bodyt (tc body (extend-env (bind arg argt) env) ty-vars))
         (cond
-          [(subtype? bodyt rett) (tv-arrow argt rett)]
+          [(subtype? bodyt rett) (t-arrow argt rett)]
           [else (err "lambda type mismatch: ~a ~a" rett bodyt)])]
        [_ (err "(impossible) got a non-function type for lambda")])]
     
     [(s-app fun arg)
-     (match (tc fun env)
-       [(tv-arrow argt rett)
+     (match (tc fun env ty-vars)
+       [(t-arrow argt rett)
+        (define given-argt (tc arg env ty-vars))
         (cond
-          [(subtype? (tc arg env) argt) rett]
-          [else (err "function type did not match arg type")])]
+          [(subtype? given-argt argt) rett]
+          [else (err "function type did not match arg type: ~a ~a"
+                     argt given-argt)])]
        [_ (err "can't apply non-function")])]
     
     [(s-ty-lam arg body)
-     ; Here we should be checking that the body is well-typed with arg
-     ; in the context (though w/o arg being assigned any specific type).
-     ; Right now we are incorrect for unapplied ty-lambdas.
-     (tv-all arg body env)]
+     (t-all arg (tc body env (cons arg ty-vars)))]
     
     [(s-ty-app fun arg)
-     (match (tc fun env)
-       [(tv-all arg-id body all-env)
-        (tc body
-            (extend-env (bind arg-id (ty-interp arg env))
-                        all-env))]
+     (match (tc fun env ty-vars)
+       [(t-all arg-id body-ty)
+        (match arg
+          [(t-id id)
+           (cond 
+             [(member? id ty-vars) (ty-subst arg arg-id body-ty)]
+             [else (err "unbound type var: ~a" id)])]
+          [_ (ty-subst arg arg-id body-ty)])]
        [_ (err "can't apply non-universal to type")])]
     
     [(s-cat e1 e2)
-     (match (tc e1 env)
-       [(tv-str s1)
-        (match (tc e2 env)
-          [(tv-str s2) (tv-str (pat-cat s1 s2))]
+     (match (tc e1 env ty-vars)
+       [(t-str s1)
+        (match (tc e2 env ty-vars)
+          [(t-str s2) (t-str (pat-cat s1 s2))]
           [_ (err "cat: expected string as second arg")])]
        [_ (err "cat: expected string as first arg")])]
     #|    
@@ -137,7 +197,7 @@
     
     [(s-fold fun acc obj)
      (match (tc obj env)
-       [(tv-obj fields)
+       [(t-obj fields)
         (match (tc fun env)
           [(t-arrow namet (t-arrow valt (t-arrow acct rett)))
            (cond

@@ -42,12 +42,17 @@
 (define-type Env (Envof Value))
 
 ; Types
-(define-type Type (U t-str t-id t-arrow t-all))
+(define-type Type (U t-str t-id t-arrow t-all
+                     t-obj t-get t-ext))
 
 (struct: t-str ([pat : Pat]) #:transparent)
 (struct: t-id ([id : Symbol]) #:transparent)
 (struct: t-arrow ([arg : Type] [ret : Type]) #:transparent)
 (struct: t-all ([arg : Symbol] [body : Type]) #:transparent)
+
+(struct: t-obj () #:transparent)
+(struct: t-get ([obj : Type] [field : Type]) #:transparent)
+(struct: t-ext ([obj : Type] [field : Type] [val : Type]) #:transparent)
 
 ; Type environment
 (define-type TyEnv (Envof Type))

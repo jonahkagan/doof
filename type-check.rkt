@@ -16,55 +16,48 @@
 
 (define extend-env #{poly-extend-env @ Type})
 
+(define pat-equal? equal?)
+
 (define str (t-str (pat-all)))
 
-
 (define: (subtype? [t1 : Type] [t2 : Type]) : Boolean
-  (match* (t1 t2)
-    [((t-str s1) (t-str s2))
-     (subpat? s1 s2)]
-    [((t-id id1) (t-id id2))
-     (equal? id1 id2)]
-    [((t-arrow arg1 ret1) (t-arrow arg2 ret2))
-     (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
-    #|
-    ; Width- and depth-based subtyping for objects
-    [((t-obj fields1) (t-obj fields2))
-     (andmap (lambda: ([f1 : t-field])
-               (match (fields-get fields1 (t-field-name f1))
-                 [(Some t2) (subtype? (t-field-value f1) t2)]  
-                 [(None) false]))
-             fields2)]
-|#    
-    [(_ _) false]))
+    (match* (t1 t2)
+      [((t-str s1) (t-str s2))
+       (subpat? s1 s2)]
+      [((t-id id1) (t-id id2))
+       (equal? id1 id2)]
+      [((t-arrow arg1 ret1) (t-arrow arg2 ret2))
+       (and (subtype? arg2 arg1) (subtype? ret1 ret2))]
+      [((t-obj) (t-obj)) true]
+      ; Width- and depth-based subtyping for objects
+      [((t-ext _ _ _) (t-ext _ _ _))
+       (define fields1 (ty-fields-list t1))
+       (andmap (lambda: ([f2 : (Pairof Pat Type)])
+                 (match (ty-fields-list-lookup (car f2) fields1)
+                   [(Some t2) (subtype? (cdr f2) t2)]
+                   [(None) false]))
+               (ty-fields-list t2))]
+      [(_ _) (equal? t1 t2)]))
 
 (define: (subpat? [p1 : Pat] [p2 : Pat]) : Boolean
   (match (cons p1 p2)
     [(cons (pat-str p1) (pat-str p2)) (equal? p1 p2)]
     [(cons _ (pat-all)) true]
     [_ false]))
+    
+(define: (ty-fields-list [t : Type]) : (Listof (Pairof Pat Type))
+  (match t
+    [(t-obj) empty]
+    [(t-ext obj (t-str pat) val)
+     (cons (cons pat val)
+           (ty-fields-list obj))]))
 
-#|
-(define: (ty-interp [e : TyExpr] [env : TyEnv]) : Type
-  (match e
-    [(ts-str s) (tv-str s)]
-    
-    [(ts-id id)
-     (match (lookup id env)
-       [(None) (err "Unbound type id: ~a" id)]
-       [(Some t) t])]
-    
-    [(ts-arrow arg ret)
-     (tv-arrow (ty-interp arg env)
-               (ty-interp ret env))]
-    
-    ;[(ts-lam arg body)
-    ; (tv-clos arg body env)]
-    
-    ;[(ts-app fun arg)
-    ; (ty-app (ty-interp fun env) (ty-interp arg env))]
-    ))
-|#
+(define: (ty-fields-list-lookup [name : Pat] [fields : (Listof (Pairof Pat Type))])
+  : (Opt Type)
+  (cond
+    [(empty? fields) (None)]
+    [(pat-equal? name (car (first fields))) (Some (cdr (first fields)))]
+    [else (ty-fields-list-lookup name (rest fields))]))
 
 #|
 (define n 0)
@@ -101,22 +94,31 @@
 (define: (ty-subst [t : Type] [id : Symbol] [body : Type]) : Type
   (match body
     [(t-str _) body]
-    
     [(t-id id1)
      (cond
        [(equal? id1 id) t]
        [else body])]
-    
     [(t-arrow arg ret) (t-arrow (ty-subst t id arg)
-                                (ty-subst t id ret))]
-    
+                                (ty-subst t id ret))]  
     [(t-all id1 t2)
      (cond
        [(equal? id1 id) body]
        [(member? id1 (ty-fv t)) (err "trying to subst a type with a free var into a ty-lambda with that same var - just don't do it!")]
-        ;(ty-subst t id (ty-alpha-conv body))]
+       ;(ty-subst t id (ty-alpha-conv body))]
        [else (t-all id1 (ty-subst t id t2))])]
     ))
+
+(define: (ty-get-field [obj : Type] [name : Type]) : Type
+  (match obj
+    [(t-obj) (err "get: field not found on empty obj" )]
+    [(t-ext obj-ext name-ext val-ext)
+     (match* (name name-ext)
+       [((t-str name) (t-str name-ext))
+        (cond
+          [(pat-equal? name name-ext) val-ext]
+          [else (ty-get-field obj-ext (t-str name))])]
+       [(_ _) (err "get: expected string type for field name")])]
+    [_ (err "get: expected object type")]))
 
 (define: (tc-expr [e : Expr]) : Type
   (tc e mt-env empty))
@@ -170,62 +172,33 @@
           [(t-str s2) (t-str (pat-cat s1 s2))]
           [_ (err "cat: expected string as second arg")])]
        [_ (err "cat: expected string as first arg")])]
-    #|    
-    [(s-obj) (t-obj empty)]
     
-    [(s-get obj field)
-     (match (tc obj env)
-       [(t-obj fields)
-        (match (tc field env)
-          [(t-str name)
-           (match (fields-get fields name)
-             [(Some t) t]
-             [(None) (err "get: field not found: ~a" name)])]
-          [_ (err "get: expected string for field name")])]
-       [_ (err "get: expected obj")])]
+    [(s-obj) (t-obj)]
     
-    [(s-ext obj field val)
-     (match (tc obj env)
-       [(t-obj fields)
-        (match (tc field env)
-          [(t-str name) ; TODO check for singletons?
-           (t-obj (fields-ext fields name (tc val env)))]
-          [_ (err "ext: expected string for field name")])]
-       [_ (err "ext: expected obj")])]
+    [(s-get obj name)
+     (ty-get-field (tc obj env ty-vars) (tc name env ty-vars))]
     
-    [(s-fold fun acc obj)
-     (match (tc obj env)
-       [(t-obj fields)
-        (match (tc fun env)
-          [(t-arrow namet (t-arrow valt (t-arrow acct rett)))
-           (cond
-             [(not (equal? namet str))
-              (err "fold: first lambda must take Strings")]
-             ; Should have a case ensuring second lambda accepts same type as obj values
-             [(not (subtype? (tc acc env) acct))
-              (err "fold: third lambda arg does not match type of initial accumulator")]
-             [else rett])]
-          [_ (err "fold: expected triply nested lambda")])]
-       [_ (err "fold: expected object")])]
+    [(s-ext obj name val)
+     (t-ext (tc obj env ty-vars)
+            (tc name env ty-vars)
+            (tc val env ty-vars))]
+    
+    #|
+[(s-fold fun acc obj)
+ (match (tc obj env)
+   [(t-obj fields)
+    (match (tc fun env)
+      [(t-arrow namet (t-arrow valt (t-arrow acct rett)))
+       (cond
+         [(not (equal? namet str))
+          (err "fold: first lambda must take Strings")]
+         ; Should have a case ensuring second lambda accepts same type as obj values
+         [(not (subtype? (tc acc env) acct))
+          (err "fold: third lambda arg does not match type of initial accumulator")]
+         [else rett])]
+      [_ (err "fold: expected triply nested lambda")])]
+   [_ (err "fold: expected object")])]
 |#
     ))
-#|
-; For now, copied these from interp. Object get/ext will be well-typed
-; only when the given field name is a singleton string.
-(define: (fields-get [fields : (Listof t-field)] [name : Pat])
-  : (Opt Type)
-  (cond
-    [(empty? fields) (None)]
-    [(pat-equal? name (t-field-name (first fields)))
-     (Some (t-field-value (first fields)))]
-    [else (fields-get (rest fields) name)]))
 
-(define: (fields-ext [fields : (Listof t-field)] [name : Pat]
-                     [val : Type]) : (Listof t-field)
-  (cons (t-field name val)
-        (filter (lambda: ([f : t-field])
-                  (not (pat-equal? (t-field-name f) name)))
-                fields)))
-|#
 
-(define pat-equal? equal?)

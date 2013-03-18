@@ -49,26 +49,19 @@
 
 (define: (parse-type [se : Any]) : Type
   (cond
-    [(string? se) (t-str (parse-pat se))]
+    [(string? se) (t-str (pat-str se))]
     [(symbol? se)
      (case se
        [(String) (t-str (pat-all))]
+       [(Obj) (t-obj)]
        [else (t-id se)])]
     [(list? se)
      (match se
        [`(,arg -> ,ret)
         (t-arrow (parse-type arg) (parse-type ret))]
-#|
-[`(Obj (,names : ,fields) ...)
-        (cond
-          [(andmap string? names)
-           (t-obj (map t-field
-                       (map parse-pat names)
-                       (map parse-type fields)))]
-          [else (error "type field names must be pattern strings")])]
-|#
+       [`(get ,obj ,field)
+        (t-get (parse-type obj) (parse-type field))]
+       [`(ext ,obj (,field : ,val))
+        (t-ext (parse-type obj) (parse-type field) (parse-type val))]
        [_ (error "bad type parse" se)])]
     [else (error "bad type parse" se)]))
-
-(define: (parse-pat [str : String]) : Pat
-  (pat-str str))

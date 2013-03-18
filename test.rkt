@@ -98,6 +98,8 @@
 
 ; Type checking tests
 
+(define t (lambda (e) (tc (parse e))))
+
 (define str (t-str (pat-all)))
 (define s (t-str (pat-str "s")))
 
@@ -114,24 +116,25 @@
 (check-tc-exn '((lambda (f :: (String -> String)) -> String (f "s"))
                 (lambda (x :: "doof") -> String x)))
 
-#|
+
 (check-tc-exn '(get (obj) "doofus")) ; field not found
 (check-tc-exn '(get (ext (obj) ("doofus" : "dodo")) "dodo"))
 
 
-(check-tc-exn '(lambda (o :: (Obj ("doofus" : "dodo"))) -> String
+(check-tc-exn '(lambda (o :: (ext Obj ("doofus" : "dodo"))) -> String
                  (get o "dodo")))
-(check-tc-exn '((lambda (o :: (Obj ("doofus" : "dodo"))) -> String
+(check-tc-exn '((lambda (o :: (ext Obj ("doofus" : "dodo"))) -> String
                   (get o "doofus"))
                 (ext (obj) ("dodo" : "doofus"))))
-(check-tc-exn '((lambda (o :: (Obj ("doofus" : "dodo"))) -> (Obj) o)
-                (ext (obj) ("doofus" : (lambda (x String) -> String x)))))
+(check-tc-exn '((lambda (o :: (ext Obj ("doofus" : "dodo"))) -> Obj o)
+                (ext (obj) ("doofus" : (lambda (x :: String)
+                                         -> String x)))))
 
-(check-tc '((lambda (o :: (Obj ("doofus" : "dodo"))) -> String
+(check-tc '((lambda (o :: (ext Obj ("doofus" : "dodo"))) -> String
               (get o "doofus"))
             (ext (ext (obj) ("dodo" : "doofus")) ("doofus" : "dodo")))
           str)
-|#
+
 
 #;(check-tc '((cat "doof") "us")
             (t-str (pat-str "doofus")))
@@ -245,9 +248,6 @@
                   @ Z))
           (t-all 'Z (t-all 'alpha1 (t-arrow (t-id 'Z) (t-id 'Z)))))
 
-(define t (lambda (e) (tc (parse e))))
-
-;(check-tc-exn '((lambda (x (Obj)) -> x x) "doofus"))
 #|
 (check-tc '((lambda (x :: String) -> (cat "doof" x)
               ((cat "doof") x))
@@ -282,7 +282,7 @@
                  @ "doofus") "doofus")
               doofus)
 
-#|
+
 (define o1 (v-obj (list (field "doofus" dodo))))
 (define o2 (v-obj (list (field "dodo" doofus) (field "doofus" dodo))))
 
@@ -311,7 +311,7 @@
 #;(check-interp '(get (ext (obj) ("doofus" : "dodo"))
                       ((lambda (x :: String) -> String x) "doofus"))
                 dodo)
-
+#|
 (check-interp 
  '(fold (lambda (name :: String) -> (String -> (String -> String))
           (lambda (value :: String) -> (String -> String)

@@ -65,6 +65,8 @@
     ; (ty-app (ty-interp fun env) (ty-interp arg env))]
     ))
 |#
+
+#|
 (define n 0)
 (define: (replace [id : Symbol] [new-id : Symbol] [t : Type]) : Type
   (match t
@@ -87,6 +89,7 @@
        (define new-id (string->symbol (format "alpha~a" n)))
        (t-all new-id (replace id new-id t2))]
       [_ (error "alpha-conv only for t-all")])))
+|#
 
 (define: (ty-fv [t : Type]) : (Listof Symbol)
   (match t
@@ -96,12 +99,6 @@
     [(t-all id body) (remove* '(id) (ty-fv body))]))
 
 (define: (ty-subst [t : Type] [id : Symbol] [body : Type]) : Type
-  #|(cond
-    [(not (or (empty? (ty-fv body))
-          (equal? (ty-fv body) (list id))))
-          (err "can't subst into non-closed type")]
-    [else
-|#
   (match body
     [(t-str _) body]
     
@@ -116,7 +113,8 @@
     [(t-all id1 t2)
      (cond
        [(equal? id1 id) body]
-       [(member? id1 (ty-fv t)) (ty-subst t id (ty-alpha-conv body))]
+       [(member? id1 (ty-fv t)) (err "trying to subst a type with a free var into a ty-lambda with that same var - just don't do it!")]
+        ;(ty-subst t id (ty-alpha-conv body))]
        [else (t-all id1 (ty-subst t id t2))])]
     ))
 

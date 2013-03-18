@@ -238,7 +238,7 @@
 (check-tc '(ty-lambda (T) ((ty-lambda (S) (lambda (x :: S) -> S x)) @ T))
           (t-all 'T (t-arrow (t-id 'T) (t-id 'T))))
 
-(check-tc '(ty-lambda (Z)
+#;(check-tc '(ty-lambda (Z)
                  ((ty-lambda (X)
                              (ty-lambda (Z)
                                         (lambda (a :: X) -> X a)))

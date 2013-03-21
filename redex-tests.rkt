@@ -15,7 +15,9 @@
           (if (not (null? vs))
               (andmap
                (λ (v)
-                 (equal?
+                 (andmap
+                  (λ (t1 t2)
+                    (type-equiv? ,t1 ,t2))
                   ts
                   (types-of v)))
                vs)
@@ -28,6 +30,10 @@
       (check-reduction-relation red pred)
       (covered-cases c))))
 
+(define-syntax-rule (type-equiv? t1 t2)
+  (and (term (<: t1 t2))
+       (term (<: t2 t1))))
+
 (define (types-of e)
   (judgment-holds (types · ,e t) t))
 
@@ -37,54 +43,60 @@
 (define (types? e)
   (not (null? (types-of e))))
 
-(define v? (redex-match Ev v))
+(define v? (redex-match doof-ctx v))
 
 (define (reduces? e)
   (not (null? (reds-of e))))
 
 ; Typing
 
-(test-equal
- (judgment-holds
-  (types (x : str (x : (-> str str) ·))
-         x
-         t)
-  t)
- (list (term str)))
+(define-syntax test-types
+  (syntax-rules ()
+    [(test-types e expected)
+     (test-equal
+      (judgment-holds (types · e t) t)
+      (list (term expected)))]
+    [(test-types Γ e expected)
+     (test-equal
+      (judgment-holds (types Γ e t) t)
+      (list (term expected)))]))
 
-(test-equal
- (judgment-holds
-  (types (y : str (x : (-> str str) ·))
-         x
-         t)
-  t)
- (list (term (-> str str))))
+(test-types
+ (x : str (x : (-> str str) ·))
+ x
+ str)
+
+(test-types
+ (y : str (x : (-> str str) ·))
+ x
+ (-> str str))
+
+(test-types ((λ (x "a") x) "a")
+            "a")
+
+(test-types ((λ (x str) x) "a")
+            "a")
+
 
 ; Evaluation
 
-(test-->>
- red
- (term (cat "a" "b"))
- (term "ab"))
+(define-syntax-rule (test-red e expected)
+  (test-->> red (term e) (term expected)))
 
-(test-->>
- red
- (term (cat "a" ((λ (x str) x) "b")))
- (term "ab"))
+(test-red (cat "a" "b") "ab")
 
-(test-->>
- red
- (term (((λ (f (-> str str))
-           (λ (x str) (f x)))
-         (λ (x str) (cat "a" x)))
-        "b"))
- (term "ab"))
+(test-red (cat "a" ((λ (x str) x) "b"))
+          "ab")
 
-(test-->>
- red
- (term (((λ (x str)
-           (λ (x str) x))
-         "a") "b"))
- "b")
+(test-red (((λ (f (-> str str))
+              (λ (x str) (f x)))
+            (λ (x str) (cat "a" x)))
+           "b")
+          "ab")
+
+(test-red (((λ (x str)
+              (λ (x str) x))
+            "a") "b")
+          "b")
 
 (test-results)

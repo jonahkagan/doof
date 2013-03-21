@@ -24,7 +24,7 @@
               #t))
         #t)))
 
-(define (test-pred pred)
+(define (check-pred pred)
   (let ([c (make-coverage red)])
     (parameterize ([relation-coverage (list c)])
       (check-reduction-relation red pred)
@@ -73,8 +73,27 @@
 (test-types ((λ (x str) x) "a")
             str)
 
+(test-types (obj ("f" "x"))
+            (t-obj ("f" "x")))
+
+(test-types (ext (obj) "f" "x")
+            (t-obj ("f" "x")))
+
+(test-types (ext (ext (obj) "f" "x") "g" "y")
+            (t-obj ("g" "y") ("f" "x")))
+
+(test-types (ext (ext (obj) "f" "x") "f" "y")
+            (t-obj ("f" "y")))
+
+
 
 ; Evaluation
+
+(define (build-obj fields)
+  (foldl (λ (f o)
+           (term (ext ,o ,(car f) ,(cdr f))))
+         (term (obj))
+         fields))
 
 (define-syntax-rule (test-red e expected)
   (test-->> red (term e) (term expected)))
@@ -94,5 +113,25 @@
               (λ (x str) x))
             "a") "b")
           "b")
+
+(test-red (ext (obj) "f" "x")
+          (obj ("f" "x")))
+
+(test-red (ext (ext (obj) "f" "x") "f" "y")
+          (obj ("f" "y")))
+
+(test-red ,(build-obj '(("x" . "a")
+                        ("f" . "b")
+                        ("g" . "c")
+                        ("f" . "d")
+                        ("g" . "e")
+                        ("y" . "h")))
+          (obj ("y" "h")
+               ("g" "e")
+               ("f" "d")
+               ("x" "a")))
+
+(test-red (get (obj ("f" "x") ("g" "y")) (cat "g" ""))
+          "y")
 
 (test-results)

@@ -17,9 +17,9 @@
                (λ (v)
                  (andmap
                   (λ (t1 t2)
-                    (type-equiv? ,t1 ,t2))
-                  ts
-                  (types-of v)))
+                    (term (<: ,t1 ,t2)))
+                  (types-of v)
+                  ts))
                vs)
               #t))
         #t)))
@@ -29,10 +29,6 @@
     (parameterize ([relation-coverage (list c)])
       (check-reduction-relation red pred)
       (covered-cases c))))
-
-(define-syntax-rule (type-equiv? t1 t2)
-  (and (term (<: t1 t2))
-       (term (<: t2 t1))))
 
 (define (types-of e)
   (judgment-holds (types · ,e t) t))
@@ -75,7 +71,7 @@
             "a")
 
 (test-types ((λ (x str) x) "a")
-            "a")
+            str)
 
 
 ; Evaluation

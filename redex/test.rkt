@@ -77,6 +77,9 @@
 (test-types ((λ (x str) str x) "a")
             str)
 
+(test-equal (types-of (term ((λ (a str) "b" a) "b")))
+            empty)
+
 (test-types (obj ("f" "x"))
             (t-obj ("f" "x")))
 

@@ -2,7 +2,8 @@
 (require redex)
 (provide (all-defined-out))
 
-(require "lang.rkt"
+(require "pat.rkt"
+         "lang.rkt"
          "kinding.rkt")
 
 (define-extended-language doof-tc doof-kc

@@ -89,8 +89,10 @@
 (test-types (ext (ext (obj) "f" "x") "f" "y")
             (t-obj ("f" "y")))
 
-
-
+(test-types ((λ (o (t-obj ("f" "1"))) (t-obj ("f" "1") ("g" str))
+               (ext o "g" "2"))
+             (obj ("f" "1")))
+            (t-obj ("f" "1") ("g" str)))
 
 ; Evaluation
 
@@ -153,5 +155,6 @@
 
 (test-types ((λ (a ((tλ (X *) X) str)) str a) "b")
             str)
+
 
 (test-results)

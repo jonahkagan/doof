@@ -9,14 +9,14 @@
   (Γ • (x : t Γ))
   (tv p
       (-> t t)
-      (obj (string t) ...)
+      (t-obj (string t) ...)
       (tλ (X k) t))
   (tE hole
       (tE t)
       (tv tE)
       (-> tE t)
       (-> tv tE)
-      (obj (string t_1) ... (string tE) (string t) ...)))
+      (t-obj (string t_1) ... (string tE) (string t) ...)))
 
 ; Subtyping relation
 (define-relation doof
@@ -91,7 +91,7 @@
    (where t_r2 (t-reduce t_r))
    (types (x : t_a2 Γ) e t_b)
    (<: t_b t_r2)
-   ------------------------------------ "t-abs"
+   ------------------------------------------ "t-abs"
    (types Γ (λ (x t_a) t_r e) (-> t_a2 t_r2))]
   
   [(types Γ e_1 (-> t_11 t_12))
@@ -109,7 +109,7 @@
   
   [(types Γ e_1 t_1) ...
    (side-condition (distinct (string_1 ...)))
-   ------------------------------------------------ "t-obj"
+   ------------------------------------------ "t-obj"
    (types Γ (obj (string_1 e_1) ...)
           (t-obj (string_1 t_1) ...))]
   

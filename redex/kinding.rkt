@@ -35,4 +35,4 @@
   
   [(kinds Γk p *) "k-pat"]
   
-  [(kinds Γk (obj (string t) ...) *) "k-obj"])
+  [(kinds Γk (t-obj (string t) ...) *) "k-obj"])

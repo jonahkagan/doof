@@ -19,6 +19,7 @@
   (t p
      (-> t t)
      (t-obj (p t) ...)
+     (t-cat t t)
      X
      (tλ (X k) t)
      (t t))
@@ -26,6 +27,11 @@
   ; Kinds
   (k *
      (=> k k)))
+
+(define-metafunction doof
+  str-cat : string string -> string
+  [(str-cat string_1 string_2)
+   ,(string-append (term string_1) (term string_2))])
 
 (define-metafunction doof
   distinct : any ... -> boolean

@@ -35,4 +35,9 @@
   
   [(kinds Γk p *) "k-pat"]
   
+  [(kinds Γk t_1 *)
+   (kinds Γk t_2 *)
+   ---------------------------- "k-cat"
+   (kinds Γk (t-cat t_1 t_2) *)]
+  
   [(kinds Γk (t-obj (string t) ...) *) "k-obj"])

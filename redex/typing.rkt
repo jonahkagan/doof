@@ -17,6 +17,8 @@
       (tv tE)
       (-> tE t)
       (-> tv tE)
+      (t-cat tE t)
+      (t-cat tv tE)
       (t-obj (string t_1) ... (string tE) (string t) ...)))
 
 ; Subtyping relation
@@ -53,6 +55,8 @@
    
    (==> ((tλ (X k) t) tv) (t-subst X tv t)
         "q-app")
+   (==> (t-cat string_1 string_2) (str-cat string_1 string_2)
+        "q-cat")
    
    with
    [(--> (in-hole tE t_1) (in-hole tE t_2))

@@ -26,7 +26,7 @@
             (let ([tvs (types-of (first vs))])
               (cond
                 [(null? tvs) #f]
-                [(> (length tvs) 1)) #f]
+                [(> (length tvs) 1) #f]
                 [else
                  (term (<: ,(first tvs) ,(first ts)))]))]))])))
 
@@ -99,6 +99,11 @@
              (obj ("f" "1")))
             (t-obj ("f" "1") ("g" str)))
 
+(test-types ((λ (s "a") (t-cat "a" "b")
+               (cat s "b"))
+             "a")
+            "ab")
+
 ; Evaluation
 
 (define (build-obj fields)
@@ -160,6 +165,12 @@
 
 (test-types ((λ (a ((tλ (X *) X) str)) str a) "b")
             str)
+
+(test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
+               (cat s "b"))
+             "a")
+            "ab")
+             
 
 
 (test-results)

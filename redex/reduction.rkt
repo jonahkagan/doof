@@ -29,7 +29,7 @@
    #:domain e
    (==> ((λ (x t) t e) v) (subst x v e)
         "e-app")
-   (==> (cat v_1 v_2) (str-cat v_1 v_2)
+   (==> (cat string_1 string_2) (str-cat string_1 string_2)
         "e-cat")
    (==> (ext (obj (string_1 v_1) ...) string_new v_new)
         (obj (string_new v_new) (string_1 v_1) ...)
@@ -65,7 +65,3 @@
   [(subst x v (ext e_1 e_2 e_3))
           (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))])
 
-(define-metafunction doof-ctx
-  str-cat : string string -> string
-  [(str-cat string_1 string_2)
-   ,(string-append (term string_1) (term string_2))])

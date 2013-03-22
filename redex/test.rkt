@@ -1,6 +1,10 @@
 #lang racket
-(require redex
-         "redex.rkt")
+(require redex)
+
+(require "lang.rkt"
+         "kinding.rkt"
+         "typing.rkt"
+         "reduction.rkt")
 
 (define (progress-holds? e)
   (if (types? e)

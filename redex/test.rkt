@@ -14,19 +14,21 @@
 
 (define (preservation-holds? e)
   (let ([ts (types-of e)])
-    (if (not (null? ts))
-        (let ([vs (reds-of e)])
-          (if (not (null? vs))
-              (andmap
-               (λ (v)
-                 (andmap
-                  (λ (t1 t2)
-                    (term (<: ,t1 ,t2)))
-                  (types-of v)
-                  ts))
-               vs)
-              #t))
-        #t)))
+    (cond
+      [(null? ts) #t]
+      [(> (length ts) 1) #f]
+      [else
+       (let ([vs (reds-of e)])
+         (cond
+           [(null? vs) #t]
+           [(> (length vs) 1) #f]
+           [else
+            (let ([tvs (types-of (first vs))])
+              (cond
+                [(null? tvs) #f]
+                [(> (length tvs) 1)) #f]
+                [else
+                 (term (<: ,(first tvs) ,(first ts)))]))]))])))
 
 (define (check-pred pred)
   (let ([c (make-coverage red)])

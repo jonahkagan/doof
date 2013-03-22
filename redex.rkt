@@ -22,7 +22,62 @@
   ; Types
   (t p
      (-> t t)
-     (t-obj (p t) ...)))
+     (t-obj (p t) ...)
+     X
+     (tλ (X k) t)
+     (t t))
+  (X variable-not-otherwise-mentioned)
+  ; Kinds
+  (k *
+     (=> k k)))
+
+
+(define-extended-language doof-kc doof
+  (Γk • (X : k Γk)))
+
+; Kind checking
+(define-judgment-form doof-kc
+  #:mode (kinds I I O)
+  #:contract (kinds Γk t k)
+  
+  [(kinds (X : k Γk) X k) "k-var"]
+  
+  [(kinds Γk X_1 k_1)
+   (side-condition (distinct X_1 X_2))
+   ----------------------------------- "k-ctx"
+   (kinds (X_2 : t_2 Γk) X_1 k_1)]
+  
+  [(kinds (X : k_1 Γk) t k_2)
+   -------------------------------------- "k-abs"
+   (kinds Γk (tλ (X k_1) t) (=> k_1 k_2))]
+  
+  [(kinds Γk t_1 (=> k_11 k_12))
+   (kinds Γk t_2 k_11)
+   ----------------------------- "k-app"
+   (kinds Γk (t_1 t_2) k_12)]
+  
+  [(kinds Γk t_1 *)
+   (kinds Γk t_2 *)
+   ------------------------- "k-arrow"
+   (kinds Γk (-> t_1 t_2) *)]
+  
+  [(kinds Γk p *) "k-pat"]
+  
+  [(kinds Γk (obj (string t) ...) *) "k-obj"])
+
+(define-extended-language doof-tc doof-kc
+  (Γ • (x : t Γ))
+  (tv p
+      (-> t t)
+      (obj (string t) ...)
+      (tλ (X k) t))
+  (tE hole
+      (tE t)
+      (tv tE)
+      (-> tE t)
+      (-> tv tE)
+      (obj (string t_1) ... (string tE) (string t) ...)))
+
 
 ; Sub-pattern relation
 (define-relation pat
@@ -58,26 +113,48 @@
   ; S-Pat
   [(<: p_1 p_2)
    (<p p_1 p_2)]
-  ; S-ObjObj
+  ; S-Obj
   [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
    (side-condition
     (andmap
-     (λ (f1)
+     (λ (n1 v1)
        (andmap
-        (λ (f2)
-          (if (equal? (car f1) (car f2))
-              (term (<: ,(cdr f1) ,(cdr f2)))
+        (λ (n2 v2)
+          (if (equal? n1 n2)
+              (term (<: ,v1 ,v2))
               #t))
-        (map cons
-             (term (string_n2 ...))
-             (term (t_v2 ...)))))
-     (map cons
-          (term (string_n1 ...))
-          (term (t_v1 ...)))))]
+        (term (string_n2 ...))
+        (term (t_v2 ...))))
+     (term (string_n1 ...))
+     (term (t_v1 ...))))]
   )
 
-(define-extended-language doof-tc doof
-  [Γ · (x : t Γ)])
+; Type (parallel) reduction
+(define t-red
+  (reduction-relation
+   doof-tc
+   #:domain t
+   
+   (==> ((tλ (X k) t) tv) (t-subst X tv t)
+        "te-app")
+   
+   with
+   [(--> (in-hole tE t_1) (in-hole tE t_2))
+    (==> t_1 t_2)]
+   ))
+                      
+                      
+(require redex/tut-subst)
+(define-metafunction doof-tc
+  t-subst : X tv t -> t
+  [(t-subst X tv t)
+   ,(subst/proc x? (list (term X)) (list (term tv)) (term t))])
+(define X? (redex-match doof X))
+
+(define-metafunction doof-tc
+  t-reduce : t -> tv
+  [(t-reduce t)
+   ,(first (apply-reduction-relation* t-red (term t)))])
 
 ; Type checking
 (define-judgment-form doof-tc
@@ -93,9 +170,11 @@
    ------------------------------------ "t-ctx"
    (types (x_2 : t_2 Γ) x_1 t_1)]
   
-  [(types (x : t_1 Γ) e t_2)
+  [(kinds • t_1 *)
+   (where t_1r (t-reduce t_1))
+   (types (x : t_1r Γ) e t_2)
    ------------------------------------ "t-abs"
-   (types Γ (λ (x t_1) e) (-> t_1 t_2))]
+   (types Γ (λ (x t_1) e) (-> t_1r t_2))]
   
   [(types Γ e_1 (-> t_11 t_12))
    (types Γ e_2 t_2)
@@ -148,8 +227,8 @@
   distinct : any ... -> boolean
   [(distinct any_1 ...)
    ,(let ([as (term (any_1 ...))]) 
-     (= (length as)
-        (length (remove-duplicates as))))])
+      (= (length as)
+         (length (remove-duplicates as))))])
 
 (define-extended-language doof-ctx doof-tc
   ; Values
@@ -172,7 +251,7 @@
 (define red
   (reduction-relation
    doof-ctx
-   ;#:domain e  
+   #:domain e
    (==> ((λ (x t) e) v) (subst x v e)
         "e-app")
    (==> (cat v_1 v_2) (str-cat v_1 v_2)

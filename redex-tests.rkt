@@ -31,7 +31,7 @@
       (covered-cases c))))
 
 (define (types-of e)
-  (judgment-holds (types · ,e t) t))
+  (judgment-holds (types • ,e t) t))
 
 (define (reds-of e)
   (apply-reduction-relation red e))
@@ -50,7 +50,7 @@
   (syntax-rules ()
     [(test-types e expected)
      (test-equal
-      (judgment-holds (types · e t) t)
+      (judgment-holds (types • e t) t)
       (list (term expected)))]
     [(test-types Γ e expected)
      (test-equal
@@ -58,12 +58,12 @@
       (list (term expected)))]))
 
 (test-types
- (x : str (x : (-> str str) ·))
+ (x : str (x : (-> str str) •))
  x
  str)
 
 (test-types
- (y : str (x : (-> str str) ·))
+ (y : str (x : (-> str str) •))
  x
  (-> str str))
 
@@ -84,6 +84,7 @@
 
 (test-types (ext (ext (obj) "f" "x") "f" "y")
             (t-obj ("f" "y")))
+
 
 
 
@@ -133,5 +134,20 @@
 
 (test-red (get (obj ("f" "x") ("g" "y")) (cat "g" ""))
           "y")
+
+
+; Type operators
+
+(define-syntax-rule (test-t-red t expected)
+  (test-->> t-red (term t) (term expected)))
+
+(test-t-red ((tλ (X *) X) ((tλ (Y *) Y) "a"))
+            "a")
+
+(test-t-red ((tλ (X *) (-> X X)) str)
+            (-> str str))
+
+(test-types ((λ (a ((tλ (X *) X) str)) a) "b")
+            str)
 
 (test-results)

@@ -8,13 +8,13 @@
   ; Expressions
   (e string
      x
-     (λ (x t) e)
+     (λ (x t) t e)
      (e e)
      (cat e e)
      (obj (string e) ...)
      (ext e e e)
      (get e e))
-  (x variable-not-otherwise-mentioned)
+  ((x y) variable-not-otherwise-mentioned)
   ; Types
   (t p
      (-> t t)
@@ -22,7 +22,7 @@
      X
      (tλ (X k) t)
      (t t))
-  (X variable-not-otherwise-mentioned)
+  ((X Y) variable-not-otherwise-mentioned)
   ; Kinds
   (k *
      (=> k k)))

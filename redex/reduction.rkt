@@ -9,7 +9,7 @@
   ; Values
   (v string
      (obj (string v) ...)
-     (λ (x t) e))
+     (λ (x t) t e))
   ; Contexts
   (E hole
      (E e)
@@ -27,7 +27,7 @@
   (reduction-relation
    doof-ctx
    #:domain e
-   (==> ((λ (x t) e) v) (subst x v e)
+   (==> ((λ (x t) t e) v) (subst x v e)
         "e-app")
    (==> (cat v_1 v_2) (str-cat v_1 v_2)
         "e-cat")
@@ -50,12 +50,20 @@
     (==> e_1 e_2)]
    ))
 
-(require redex/tut-subst)
 (define-metafunction doof-ctx
   subst : x v e -> e
-  [(subst x v e)
-   ,(subst/proc x? (list (term x)) (list (term v)) (term e))])
-(define x? (redex-match doof-ctx x))
+  [(subst x v x) v]
+  [(subst x v y) y]
+  [(subst x v (λ (x t_a) t_r e)) (λ (x t_a) t_r e)]
+  [(subst x v (λ (y t_a) t_r e)) (λ (y t_a) t_r (subst x v e))]
+  ; boring cases
+  [(subst x v string) string]
+  [(subst x v (e_1 e_2)) ((subst x v e_1) (subst x v e_2))]
+  [(subst x v (cat e_1 e_2)) (cat (subst x v e_1) (subst x v e_2))]
+  [(subst x v (obj (string e) ...)) (obj (string (subst x v e)) ...)]
+  [(subst x v (get e_1 e_2)) (get (subst x v e_1) (subst x v e_2))]
+  [(subst x v (ext e_1 e_2 e_3))
+          (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))])
 
 (define-metafunction doof-ctx
   str-cat : string string -> string

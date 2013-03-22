@@ -85,11 +85,14 @@
    ------------------------------------ "t-ctx"
    (types (x_2 : t_2 Γ) x_1 t_1)]
   
-  [(kinds • t_1 *)
-   (where t_1r (t-reduce t_1))
-   (types (x : t_1r Γ) e t_2)
+  [(kinds • t_a *)
+   (kinds • t_r *)
+   (where t_a2 (t-reduce t_a))
+   (where t_r2 (t-reduce t_r))
+   (types (x : t_a2 Γ) e t_b)
+   (<: t_b t_r2)
    ------------------------------------ "t-abs"
-   (types Γ (λ (x t_1) e) (-> t_1r t_2))]
+   (types Γ (λ (x t_a) t_r e) (-> t_a2 t_r2))]
   
   [(types Γ e_1 (-> t_11 t_12))
    (types Γ e_2 t_2)

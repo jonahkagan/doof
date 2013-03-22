@@ -71,10 +71,10 @@
  x
  (-> str str))
 
-(test-types ((λ (x "a") x) "a")
+(test-types ((λ (x "a") "a" x) "a")
             "a")
 
-(test-types ((λ (x str) x) "a")
+(test-types ((λ (x str) str x) "a")
             str)
 
 (test-types (obj ("f" "x"))
@@ -105,17 +105,17 @@
 
 (test-red (cat "a" "b") "ab")
 
-(test-red (cat "a" ((λ (x str) x) "b"))
+(test-red (cat "a" ((λ (x str) str x) "b"))
           "ab")
 
-(test-red (((λ (f (-> str str))
-              (λ (x str) (f x)))
-            (λ (x str) (cat "a" x)))
+(test-red (((λ (f (-> str str)) (-> str str)
+              (λ (x str) str (f x)))
+            (λ (x str) str (cat "a" x)))
            "b")
           "ab")
 
-(test-red (((λ (x str)
-              (λ (x str) x))
+(test-red (((λ (x str) str
+              (λ (x str) str x))
             "a") "b")
           "b")
 
@@ -151,7 +151,7 @@
 (test-t-red ((tλ (X *) (-> X X)) str)
             (-> str str))
 
-(test-types ((λ (a ((tλ (X *) X) str)) a) "b")
+(test-types ((λ (a ((tλ (X *) X) str)) str a) "b")
             str)
 
 (test-results)

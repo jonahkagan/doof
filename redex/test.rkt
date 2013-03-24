@@ -40,7 +40,7 @@
   (judgment-holds (types • ,e t) t))
 
 (define (reds-of e)
-  (apply-reduction-relation red e))
+  (apply-reduction-relation* red e))
 
 (define (types? e)
   (not (null? (types-of e))))
@@ -113,6 +113,14 @@
              (obj ("g" "2")))
             (t-obj ("f" str)))
 
+(test-types (fold (λ (name str) (-> str (-> str str))
+                    (λ (val str) (-> str str)
+                      (λ (acc str) str
+                        (cat name acc))))
+                  ""
+                  (obj ("a" "1") ("b" "2") ("c" "3")))
+            str)
+
 ; Evaluation
 
 (define (build-obj fields)
@@ -135,7 +143,7 @@
            "b")
           "ab")
 
-(test-red (((λ (x str) str
+(test-red (((λ (x str) (-> str str)
               (λ (x str) str x))
             "a") "b")
           "b")
@@ -159,6 +167,14 @@
 
 (test-red (get (obj ("f" "x") ("g" "y")) (cat "g" ""))
           "y")
+
+(test-red (fold (λ (name str) (-> str (-> str str))
+                  (λ (val str) (-> str str)
+                    (λ (acc str) str
+                      (cat name acc))))
+                ""
+                (obj ("a" "1") ("b" "2") ("c" "3")))
+          "abc")
 
 
 ; Type operators

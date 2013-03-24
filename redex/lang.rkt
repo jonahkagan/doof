@@ -13,7 +13,8 @@
      (cat e e)
      (obj (string e) ...)
      (ext e e e)
-     (get e e))
+     (get e e)
+     (fold e e e))
   ((x y) variable-not-otherwise-mentioned)
   ; Types
   (t p

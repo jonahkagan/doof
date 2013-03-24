@@ -21,13 +21,16 @@
      (ext v E e)
      (ext v v E)
      (get E e)
-     (get v E)))
+     (get v E)
+     (fold E e e)
+     (fold v E e)
+     (fold v v E)))
 
 (define red
   (reduction-relation
    doof-ctx
    #:domain e
-   (==> ((λ (x t) t e) v) (subst x v e)
+   (==> ((λ (x t_1) t_2 e) v) (subst x v e)
         "e-app")
    (==> (cat string_1 string_2) (str-cat string_1 string_2)
         "e-cat")
@@ -44,6 +47,13 @@
              string_k)
         v_k
         "e-get")
+   (==> (fold v_f v_a (obj))
+        v_a
+        "e-fold-empty")
+   (==> (fold v_f v_a (obj (string_1 v_1) (string_2 v_2) ...))
+        (((v_f string_1) v_1)
+         (fold v_f v_a (obj (string_2 v_2) ...)))
+        "e-fold-obj")
    
    with
    [(--> (in-hole E e_1) (in-hole E e_2))
@@ -63,5 +73,5 @@
   [(subst x v (obj (string e) ...)) (obj (string (subst x v e)) ...)]
   [(subst x v (get e_1 e_2)) (get (subst x v e_1) (subst x v e_2))]
   [(subst x v (ext e_1 e_2 e_3))
-          (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))])
+   (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))])
 

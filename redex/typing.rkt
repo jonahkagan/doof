@@ -133,4 +133,13 @@
    (types Γ e_2 string_k)
    -------------------------------------------- "t-get"
    (types Γ (get e_1 e_2) t_k)]
+  
+  [(types Γ e_1 (-> t_fn (-> t_fv (-> t_a t_a))))
+   (types Γ e_2 t_i)
+   (types Γ e_3 t_o)
+   (<: t_fn str)
+   (<: t_i t_a)
+   (<: t_o (t-obj))
+   ---------------------------------------------- "t-fold"
+   (types Γ (fold e_1 e_2 e_3) t_a)]
   )

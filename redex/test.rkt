@@ -119,7 +119,79 @@
                         (cat name acc))))
                   ""
                   (obj ("a" "1") ("b" "2") ("c" "3")))
+            "abc")
+
+
+
+; Type operators
+
+(define-syntax-rule (test-t-red t expected)
+  (test-->> t-red (term t) (term expected)))
+
+(test-t-red ((tλ (X *) X) ((tλ (Y *) Y) "a"))
+            "a")
+
+(test-t-red ((tλ (X *) (-> X X)) str)
+            (-> str str))
+
+(test-types ((λ (a str) ((tλ (X *) X) str) a) "b")
             str)
+
+(test-types ((λ (o (t-obj ("f" str)))
+               (t-fold (tλ (N *)
+                           (tλ (V *)
+                               (tλ (A *)
+                                   (t-ext A N V))))
+                       (t-obj)
+                       (t-obj ("f" str)))
+               o)
+             (obj ("f" "1")))
+            (t-obj ("f" str)))
+
+(test-types ((λ (o (t-obj ("f" str)))
+               ((tλ (O *)
+                    (t-fold (tλ (N *)
+                                (tλ (V *)
+                                    (tλ (A *)
+                                        (t-ext A N V))))
+                            (t-obj)
+                            O))
+                (t-obj ("f" str)))
+               (fold (λ (n str) (-> str (-> (t-obj) (t-obj)))
+                       (λ (v str) (-> (t-obj) (t-obj))
+                         (λ (a (t-obj)) (t-obj)
+                           (ext a n v))))
+                     (obj)
+                     o))
+             (obj ("f" "1")))
+            (t-obj ("f" str)))
+
+(test-types ((λ (o (t-obj ("f" str) ("g" str)))
+               ((tλ (O *)
+                    (t-fold (tλ (N *)
+                                (tλ (V *)
+                                    (tλ (A *)
+                                        (t-ext A (t-cat "my" N) V))))
+                            (t-obj)
+                            O))
+                (t-obj ("f" str) ("g" str)))
+               ; "i" for ignored
+               (fold (λ (n "i") "i"
+                       (λ (v "i") "i"
+                         (λ (a "i") "i"
+                           (ext a (cat "my" n) v))))
+                     (obj)
+                     o))
+             (obj ("f" "1") ("g" "2")))
+            (t-obj ("myf" str) ("myg" str)))
+
+#| this is a kind error - we don't know that S is a string type
+(test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
+               (cat s "b"))
+             "a")
+            "ab")
+|#             
+
 
 ; Evaluation
 
@@ -176,27 +248,6 @@
                 (obj ("a" "1") ("b" "2") ("c" "3")))
           "abc")
 
-
-; Type operators
-
-(define-syntax-rule (test-t-red t expected)
-  (test-->> t-red (term t) (term expected)))
-
-(test-t-red ((tλ (X *) X) ((tλ (Y *) Y) "a"))
-            "a")
-
-(test-t-red ((tλ (X *) (-> X X)) str)
-            (-> str str))
-
-(test-types ((λ (a str) ((tλ (X *) X) str) a) "b")
-            str)
-
-#| this is a kind error - we don't know that S is a string type
-(test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
-               (cat s "b"))
-             "a")
-            "ab")
-|#             
 
 
 (test-results)

@@ -41,7 +41,7 @@
   [(kinds Γk X_1 k_1)
    (side-condition (distinct X_1 X_2))
    ----------------------------------- "k-ctx"
-   (kinds (X_2 : t_2 Γk) X_1 k_1)]
+   (kinds (X_2 : k_2 Γk) X_1 k_1)]
   
   [(kinds (X : k_1 Γk) t k_2)
    -------------------------------------- "k-abs"
@@ -61,8 +61,8 @@
   
   [(kinds Γk t_1 *)
    (kinds Γk t_2 *)
-   (<: t_1 str)
-   (<: t_2 str)
+   ;(<: t_1 str)
+   ;(<: t_2 str)
    ---------------------------- "k-cat"
    (kinds Γk (t-cat t_1 t_2) *)]
   
@@ -71,8 +71,14 @@
   [(kinds Γk t_1 *)
    (kinds Γk t_2 *)
    (kinds Γk t_3 *)
-   (<: t_1 (t-obj))
-   (<: t_2 str)
+   ;(<: t_1 (t-obj))
+   ;(<: t_2 str)
    -------------------------------- "k-ext"
    (kinds Γk (t-ext t_1 t_2 t_3) *)]
-  )
+  
+  [(kinds Γk t_1 (=> * (=> * (=> * *))))
+   (kinds Γk t_2 *)
+   (kinds Γk t_3 *)
+   ;(<: t_3 (t-obj))
+   ------------------------------------- "k-fold"
+   (kinds Γk (t-fold t_1 t_2 t_3) *)])

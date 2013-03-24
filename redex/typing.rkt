@@ -22,7 +22,10 @@
       (t-obj (string tv) ... (string tE) (string t) ...)
       (t-ext tE t t)
       (t-ext tv tE t)
-      (t-ext tv tv tE)))
+      (t-ext tv tv tE)
+      (t-fold tE t t)
+      (t-fold tv tE t)
+      (t-fold tv tv tE)))
 
 ; Type (parallel) reduction
 (define t-red
@@ -47,6 +50,13 @@
                string_k tv_new)
         (t-obj (string_1 tv_1) ... (string_k tv_new) (string_k+1 tv_k+1) ...)
         "q-ext-replace")
+   (==> (t-fold tv_f tv_a (t-obj))
+        tv_a
+        "q-fold-empty")
+   (==> (t-fold tv_f tv_a (t-obj (string_1 tv_1) (string_2 tv_2) ...))
+        (((tv_f string_1) tv_1)
+         (t-fold tv_f tv_a (t-obj (string_2 tv_2) ...)))
+        "q-fold-obj")
    
    with
    [(--> (in-hole tE t_1) (in-hole tE t_2))
@@ -64,6 +74,19 @@
   t-reduce : t -> tv
   [(t-reduce t)
    ,(first (apply-reduction-relation* t-red (term t)))])
+
+(define-metafunction doof-tc
+  t-trans : e -> t
+  [(t-trans string) string]
+  [(t-trans x) x]
+  [(t-trans (λ (x t_1) t_2 e)) (tλ (x *) (t-trans e))]
+  [(t-trans (e_1 e_2)) ((t-trans e_1 e_2))]
+  [(t-trans (cat e_1 e_2)) (t-cat (t-trans e_1) (t-trans e_2))]
+  [(t-trans (obj (string e) ...)) (t-obj (string (t-trans e)) ...)]
+  [(t-trans (ext e_1 e_2 e_3))
+   (t-ext (t-trans e_1) (t-trans e_2) (t-trans e_3))]
+  [(t-trans (fold e_1 e_2 e_3))
+   (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))])
 
 ; Type checking
 (define-judgment-form doof-tc
@@ -134,7 +157,7 @@
    -------------------------------------------- "t-get"
    (types Γ (get e_1 e_2) t_k)]
   
-  [(types Γ e_1 (-> t_fn (-> t_fv (-> t_a t_a))))
+  #;[(types Γ e_1 (-> t_fn (-> t_fv (-> t_a t_a))))
    (types Γ e_2 t_i)
    (types Γ e_3 t_o)
    (<: t_fn str)
@@ -142,4 +165,17 @@
    (<: t_o (t-obj))
    ---------------------------------------------- "t-fold"
    (types Γ (fold e_1 e_2 e_3) t_a)]
-  )
+  
+  ; We can't just do (t-trans (fold e_1 e_2 e_3))
+  ; in case e_3 is a variable, which can happen if the fold is inside
+  ; a lambda. (Technically it will break if there's a var anywhere, but
+  ; e_3 is the common case.)
+  ;
+  ; A fix might be to perform any necessary substitutions using Γ after
+  ; t-trans but before t-reduce.
+  [(types Γ e_2 t_i)
+   (types Γ e_3 t_o)
+   (<: t_o (t-obj))
+   (where t (t-reduce (t-fold (t-trans e_1) t_i t_o)))
+   ------------------------------------------------- "t-fold"
+   (types Γ (fold e_1 e_2 e_3) t)])

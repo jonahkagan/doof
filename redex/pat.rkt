@@ -32,3 +32,6 @@
    (side-condition (not (string? (term p_2))))]
   [(pat-reduce p) p])
 
+(define (pat-reducible? p)
+  (not (or (redex-match? pat str p)
+           (redex-match? pat string p))))

@@ -18,8 +18,8 @@
   ; Types
   (t p
      (-> t t)
-     (t-obj (p t) ...)
      (t-cat t t)
+     (t-obj (string t) ...)
      X
      (tλ (X k) t)
      (t t))

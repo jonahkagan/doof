@@ -19,7 +19,45 @@
       (-> tv tE)
       (t-cat tE t)
       (t-cat tv tE)
-      (t-obj (string t_1) ... (string tE) (string t) ...)))
+      (t-obj (string tv) ... (string tE) (string t) ...)))
+
+; Type (parallel) reduction
+(define t-red
+  (reduction-relation
+   doof-tc
+   #:domain t
+   
+   (==> ((tλ (X k) t) tv) (t-subst X tv t)
+        "q-app")
+   (==> (t-cat p_1 p_2) (p-cat p_1 p_2)
+        "q-cat")
+   (==> p (pat-reduce p)
+        (side-condition (pat-reducible? (term p)))
+        "q-pat")
+   
+   with
+   [(--> (in-hole tE t_1) (in-hole tE t_2))
+    (==> t_1 t_2)]
+   ))
+
+(require redex/tut-subst)
+(define-metafunction doof-tc
+  t-subst : X tv t -> t
+  [(t-subst X tv t)
+   ,(subst/proc X? (list (term X)) (list (term tv)) (term t))])
+(define X? (redex-match doof X))
+
+(define-metafunction doof-tc
+  t-reduce : t -> tv
+  [(t-reduce t)
+   ,(let ([tvs (apply-reduction-relation* t-red (term t))])
+      (if (empty? tvs)
+          (if (tv? (term t))
+              (term t)
+              (error "no reductions found for type" (term t)))
+          (first tvs)))])
+
+(define tv? (redex-match doof-tc tv))
 
 ; Subtyping relation
 (define-relation doof
@@ -35,46 +73,16 @@
   [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
    (side-condition
     (andmap
-     (λ (n1 v1)
-       (andmap
-        (λ (n2 v2)
-          (if (equal? n1 n2)
-              (term (<: ,v1 ,v2))
-              #t))
-        (term (string_n2 ...))
-        (term (t_v2 ...))))
-     (term (string_n1 ...))
-     (term (t_v1 ...))))]
+     (λ (n2 v2)
+       (ormap
+        (λ (n1 v1)
+          (and (equal? n1 n2)
+               (term (<: ,v1 ,v2))))
+        (term (string_n1 ...))
+        (term (t_v1 ...))))
+     (term (string_n2 ...))
+     (term (t_v2 ...))))]
   )
-
-; Type (parallel) reduction
-(define t-red
-  (reduction-relation
-   doof-tc
-   #:domain t
-   
-   (==> ((tλ (X k) t) tv) (t-subst X tv t)
-        "q-app")
-   (==> (t-cat string_1 string_2) (str-cat string_1 string_2)
-        "q-cat")
-   
-   with
-   [(--> (in-hole tE t_1) (in-hole tE t_2))
-    (==> t_1 t_2)]
-   ))
-                      
-                      
-(require redex/tut-subst)
-(define-metafunction doof-tc
-  t-subst : X tv t -> t
-  [(t-subst X tv t)
-   ,(subst/proc X? (list (term X)) (list (term tv)) (term t))])
-(define X? (redex-match doof X))
-
-(define-metafunction doof-tc
-  t-reduce : t -> tv
-  [(t-reduce t)
-   ,(first (apply-reduction-relation* t-red (term t)))])
 
 ; Type checking
 (define-judgment-form doof-tc

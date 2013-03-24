@@ -108,6 +108,11 @@
              "a")
             "ab")
 
+(test-types ((λ (o (t-obj)) (t-ext (t-obj) "f" str)
+               (ext o "f" "1"))
+             (obj ("g" "2")))
+            (t-obj ("f" str)))
+
 ; Evaluation
 
 (define (build-obj fields)

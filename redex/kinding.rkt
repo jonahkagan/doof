@@ -66,4 +66,13 @@
    ---------------------------- "k-cat"
    (kinds Γk (t-cat t_1 t_2) *)]
   
-  [(kinds Γk (t-obj (string t) ...) *) "k-obj"])
+  [(kinds Γk (t-obj (string t) ...) *) "k-obj"]
+  
+  [(kinds Γk t_1 *)
+   (kinds Γk t_2 *)
+   (kinds Γk t_3 *)
+   (<: t_1 (t-obj))
+   (<: t_2 str)
+   -------------------------------- "k-ext"
+   (kinds Γk (t-ext t_1 t_2 t_3) *)]
+  )

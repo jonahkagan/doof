@@ -19,7 +19,10 @@
       (-> tv tE)
       (t-cat tE t)
       (t-cat tv tE)
-      (t-obj (string tv) ... (string tE) (string t) ...)))
+      (t-obj (string tv) ... (string tE) (string t) ...)
+      (t-ext tE t t)
+      (t-ext tv tE t)
+      (t-ext tv tv tE)))
 
 ; Type (parallel) reduction
 (define t-red
@@ -34,8 +37,16 @@
    (==> p p_2
         (where p_2 (pat-reduce p))
         (side-condition (not (equal? (term p) (term p_2))))
-        ;(side-condition (pat-reducible? (term p)))
         "q-pat")
+   (==> (t-ext (t-obj (string_1 tv_1) ...) string_new tv_new)
+        (t-obj (string_new tv_new) (string_1 tv_1) ...)
+        (side-condition (not (member (term string_new)
+                                     (term (string_1 ...)))))
+        "q-ext-add")
+   (==> (t-ext (t-obj (string_1 tv_1) ... (string_k tv_k) (string_k+1 tv_k+1) ...)
+               string_k tv_new)
+        (t-obj (string_1 tv_1) ... (string_k tv_new) (string_k+1 tv_k+1) ...)
+        "q-ext-replace")
    
    with
    [(--> (in-hole tE t_1) (in-hole tE t_2))

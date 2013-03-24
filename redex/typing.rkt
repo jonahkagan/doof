@@ -63,14 +63,7 @@
 (define-metafunction doof-tc
   t-reduce : t -> tv
   [(t-reduce t)
-   ,(let ([tvs (apply-reduction-relation* t-red (term t))])
-      (if (empty? tvs)
-          (if (tv? (term t))
-              (term t)
-              (error "no reductions found for type" (term t)))
-          (first tvs)))])
-
-(define tv? (redex-match doof-tc tv))
+   ,(first (apply-reduction-relation* t-red (term t)))])
 
 ; Type checking
 (define-judgment-form doof-tc

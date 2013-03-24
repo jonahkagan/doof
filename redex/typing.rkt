@@ -31,8 +31,10 @@
         "q-app")
    (==> (t-cat p_1 p_2) (p-cat p_1 p_2)
         "q-cat")
-   (==> p (pat-reduce p)
-        (side-condition (pat-reducible? (term p)))
+   (==> p p_2
+        (where p_2 (pat-reduce p))
+        (side-condition (not (equal? (term p) (term p_2))))
+        ;(side-condition (pat-reducible? (term p)))
         "q-pat")
    
    with
@@ -58,31 +60,6 @@
           (first tvs)))])
 
 (define tv? (redex-match doof-tc tv))
-
-; Subtyping relation
-(define-relation doof
-  <: ⊆ t × t
-  ; S-Arrow
-  [(<: (-> t_11 t_12) (-> t_21 t_22))
-   (<: t_21 t_11)
-   (<: t_12 t_22)]
-  ; S-Pat
-  [(<: p_1 p_2)
-   (<p p_1 p_2)]
-  ; S-Obj
-  [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
-   (side-condition
-    (andmap
-     (λ (n2 v2)
-       (ormap
-        (λ (n1 v1)
-          (and (equal? n1 n2)
-               (term (<: ,v1 ,v2))))
-        (term (string_n1 ...))
-        (term (t_v1 ...))))
-     (term (string_n2 ...))
-     (term (t_v2 ...))))]
-  )
 
 ; Type checking
 (define-judgment-form doof-tc

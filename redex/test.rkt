@@ -167,14 +167,15 @@
 (test-t-red ((tλ (X *) (-> X X)) str)
             (-> str str))
 
-(test-types ((λ (a ((tλ (X *) X) str)) str a) "b")
+(test-types ((λ (a str) ((tλ (X *) X) str) a) "b")
             str)
 
+#| this is a kind error - we don't know that S is a string type
 (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
                (cat s "b"))
              "a")
             "ab")
-             
+|#             
 
 
 (test-results)

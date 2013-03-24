@@ -2,10 +2,34 @@
 (require redex)
 (provide (all-defined-out))
 
-(require "lang.rkt")
+(require "lang.rkt" "pat.rkt")
 
 (define-extended-language doof-kc doof
   (Γk • (X : k Γk)))
+
+; Subtyping relation
+(define-relation doof
+  <: ⊆ t × t
+  ; S-Arrow
+  [(<: (-> t_11 t_12) (-> t_21 t_22))
+   (<: t_21 t_11)
+   (<: t_12 t_22)]
+  ; S-Pat
+  [(<: p_1 p_2)
+   (<p p_1 p_2)]
+  ; S-Obj
+  [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
+   (side-condition
+    (andmap
+     (λ (n2 v2)
+       (ormap
+        (λ (n1 v1)
+          (and (equal? n1 n2)
+               (term (<: ,v1 ,v2))))
+        (term (string_n1 ...))
+        (term (t_v1 ...))))
+     (term (string_n2 ...))
+     (term (t_v2 ...))))])
 
 ; Kind checking
 (define-judgment-form doof-kc
@@ -37,6 +61,8 @@
   
   [(kinds Γk t_1 *)
    (kinds Γk t_2 *)
+   (<: t_1 str)
+   (<: t_2 str)
    ---------------------------- "k-cat"
    (kinds Γk (t-cat t_1 t_2) *)]
   

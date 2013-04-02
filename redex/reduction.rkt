@@ -57,8 +57,7 @@
    
    with
    [(--> (in-hole E e_1) (in-hole E e_2))
-    (==> e_1 e_2)]
-   ))
+    (==> e_1 e_2)]))
 
 (define-metafunction doof-ctx
   subst : x v e -> e

@@ -92,6 +92,30 @@
   [(t-trans (fold e_1 e_2 e_3))
    (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))])
 
+; Subtyping relation
+(define-relation doof
+  <: ⊆ t × t
+  ; S-Arrow
+  [(<: (-> t_11 t_12) (-> t_21 t_22))
+   (<: t_21 t_11)
+   (<: t_12 t_22)]
+  ; S-Pat
+  [(<: p_1 p_2)
+   (<p p_1 p_2)]
+  ; S-Obj
+  [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
+   (side-condition
+    (andmap
+     (λ (n2 v2)
+       (ormap
+        (λ (n1 v1)
+          (and (equal? n1 n2)
+               (term (<: ,v1 ,v2))))
+        (term (string_n1 ...))
+        (term (t_v1 ...))))
+     (term (string_n2 ...))
+     (term (t_v2 ...))))])
+
 ; Type checking
 (define-judgment-form doof-tc
   #:mode (types I I O)

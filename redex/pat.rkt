@@ -6,7 +6,13 @@
 (define-language pat
   (p str ; the set of all strings
      string
-     (p-cat p p)))
+     (p-cat p p))
+  (pv str
+      string
+      (p-cat pv pv))
+  (pE hole
+      (p-cat pE pv)
+      (p-cat pv pE)))
 
 ; Sub-pattern relation
 (define-relation pat
@@ -19,19 +25,22 @@
   [(<p p_1 (p-cat p_2 p_3))
    (where p_1 (pat-reduce (p-cat p_2 p_3)))])
 
-; might want to make this a reduction relation...
+(define p-red
+  (reduction-relation
+   pat
+   #:domain p
+   
+   (==> (p-cat string_1 string_2)
+        ,(string-append (term string_1) (term string_2)))
+   (==> (p-cat p "") p)
+   (==> (p-cat "" p) p)
+   (==> (p-cat str str) str)
+   
+   with
+   [(--> (in-hole pE p_1) (in-hole pE p_2))
+    (==> p_1 p_2)]))
+
 (define-metafunction pat
   pat-reduce : p -> p
-  [(pat-reduce (p-cat string_1 string_2))
-   ,(string-append (term string_1) (term string_2))]
-  [(pat-reduce (p-cat p_1 p_2))
-   (p-cat (pat-reduce p_1) p_2)
-   (side-condition (not (string? (term p_1))))]
-  [(pat-reduce (p-cat string_1 p_2))
-   (p-cat string_1 (pat-reduce p_2))
-   (side-condition (not (string? (term p_2))))]
-  [(pat-reduce p) p])
-
-(define (pat-reducible? p)
-  (not (or (redex-match? pat str p)
-           (redex-match? pat string p))))
+  [(pat-reduce p)
+   ,(first (apply-reduction-relation* p-red (term p)))])

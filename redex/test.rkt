@@ -185,6 +185,24 @@
              (obj ("f" "1") ("g" "2")))
             (t-obj ("myf" str) ("myg" str)))
 
+(test-types ((λ (o (t-obj ("a" str) ("b" str) ("c" str)))
+               ((tλ (O *)
+                    (t-fold (tλ (N *)
+                                (tλ (V *)
+                                    (tλ (A *)
+                                        (t-cat V A))))
+                            ""
+                            O))
+                (t-obj ("a" str) ("b" str) ("c" str)))
+               (fold (λ (name str) (-> str (-> str str))
+                       (λ (val str) (-> str str)
+                         (λ (acc str) str
+                           (cat val acc))))
+                     ""
+                     o))
+             (obj ("a" "1") ("b" "2") ("c" "3")))
+            str)
+
 #| this is a kind error - we don't know that S is a string type
 (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
                (cat s "b"))

@@ -70,9 +70,13 @@
    ,(subst/proc X? (list (term X)) (list (term tv)) (term t))])
 (define X? (redex-match doof X))
 
+; Performs all possible substitutions according to Γ, then
+; applies the reduction relation on types.
 (define-metafunction doof-tc
-  t-reduce : t -> tv
-  [(t-reduce t)
+  t-reduce : Γ t -> tv
+  [(t-reduce (X : tv_X Γ) t)
+   (t-reduce Γ (t-subst X tv_X t))]
+  [(t-reduce • t)
    ,(first (apply-reduction-relation* t-red (term t)))])
 
 (define-metafunction doof-tc
@@ -104,8 +108,8 @@
   
   [(kinds • t_a *)
    (kinds • t_r *)
-   (where t_a2 (t-reduce t_a))
-   (where t_r2 (t-reduce t_r))
+   (where t_a2 (t-reduce Γ t_a))
+   (where t_r2 (t-reduce Γ t_r))
    (types (x : t_a2 Γ) e t_b)
    (<: t_b t_r2)
    ------------------------------------------ "t-abs"
@@ -157,6 +161,7 @@
    -------------------------------------------- "t-get"
    (types Γ (get e_1 e_2) t_k)]
   
+  ; Old rule to check fold - not precise enough for dep functions
   #;[(types Γ e_1 (-> t_fn (-> t_fv (-> t_a t_a))))
    (types Γ e_2 t_i)
    (types Γ e_3 t_o)
@@ -165,17 +170,7 @@
    (<: t_o (t-obj))
    ---------------------------------------------- "t-fold"
    (types Γ (fold e_1 e_2 e_3) t_a)]
-  
-  ; We can't just do (t-trans (fold e_1 e_2 e_3))
-  ; in case e_3 is a variable, which can happen if the fold is inside
-  ; a lambda. (Technically it will break if there's a var anywhere, but
-  ; e_3 is the common case.)
-  ;
-  ; A fix might be to perform any necessary substitutions using Γ after
-  ; t-trans but before t-reduce.
-  [(types Γ e_2 t_i)
-   (types Γ e_3 t_o)
-   (<: t_o (t-obj))
-   (where t (t-reduce (t-fold (t-trans e_1) t_i t_o)))
+
+  [(where t (t-reduce Γ (t-trans (fold e_1 e_2 e_3))))
    ------------------------------------------------- "t-fold"
    (types Γ (fold e_1 e_2 e_3) t)])

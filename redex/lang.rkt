@@ -7,6 +7,7 @@
 (define-extended-language doof pat
   ; Expressions
   (e string
+     boolean
      x
      (λ (x t) t e)
      (λ (x t) e)
@@ -15,10 +16,13 @@
      (obj (string e) ...)
      (ext e e e)
      (get e e)
-     (fold e e e))
+     (fold e e e)
+     (if e e e))
   ((x y) variable-not-otherwise-mentioned)
   ; Types
   (t p
+     bool
+     Top
      (-> t t)
      (t-cat t t)
      (t-obj (string t) ...)
@@ -31,11 +35,6 @@
   ; Kinds
   (k *
      (=> k k)))
-
-(define-metafunction doof
-  str-cat : string string -> string
-  [(str-cat string_1 string_2)
-   ,(string-append (term string_1) (term string_2))])
 
 (define-metafunction doof
   distinct : any ... -> boolean

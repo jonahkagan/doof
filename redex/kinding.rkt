@@ -35,6 +35,10 @@
   
   [(kinds Γk p *) "k-pat"]
   
+  [(kinds Γk bool *) "k-bool"]
+  
+  [(kinds Γk Top *) "k-top"]
+  
   [(kinds Γk t_1 *)
    (kinds Γk t_2 *)
    ;(<: t_1 str)

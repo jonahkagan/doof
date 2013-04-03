@@ -82,6 +82,8 @@
 (test-types ((λ (x str) x) "a")
             str)
 
+(test-types #t bool)
+
 (test-equal (types-of (term ((λ (a str) "b" a) "b")))
             empty)
 
@@ -124,6 +126,11 @@
                   (obj ("a" "1") ("b" "2") ("c" "3")))
             "abc")
 
+(test-types (if #t "then" "else")
+            str)
+
+(test-types (if #t (λ (s str) s) (λ (s "a") s))
+            (-> "a" str))
 
 
 ; Type operators
@@ -206,6 +213,23 @@
              (obj ("a" "1") ("b" "2") ("c" "3")))
             str)
 
+(types-of
+ (term (λ (o (t-obj ("x" str) ("y" str)))
+         (fold (λ (name "i") "i"
+                 (λ (val "i") "i"
+                   (λ (acc "i") "i"
+                     (ext
+                      (ext 
+                       (ext acc
+                            name
+                            val)
+                       (cat name "_w__")
+                       #f)
+                      (cat name "_v__")
+                      val))))
+               (obj)
+               o))))
+
 #| this is a kind error - we don't know that S is a string type
 (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
                (cat s "b"))
@@ -269,6 +293,9 @@
                 (obj ("a" "1") ("b" "2") ("c" "3")))
           "abc")
 
-
+(test-red (if (if #t #f #t)
+              "a" "b")
+          "b")
+              
 
 (test-results)

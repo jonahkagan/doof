@@ -8,6 +8,7 @@
 (define-extended-language doof-ctx doof-tc
   ; Values
   (v string
+     boolean
      (obj (string v) ...)
      (λ (x t) t e)
      (λ (x t) e))
@@ -25,7 +26,15 @@
      (get v E)
      (fold E e e)
      (fold v E e)
-     (fold v v E)))
+     (fold v v E)
+     (if E e e)
+     (if v E e)
+     (if v v E)))
+
+(define-metafunction doof-ctx
+  str-cat : string string -> string
+  [(str-cat string_1 string_2)
+   ,(string-append (term string_1) (term string_2))])
 
 (define red
   (reduction-relation
@@ -57,7 +66,11 @@
         (((v_f string_1) v_1)
          (fold v_f v_a (obj (string_2 v_2) ...)))
         "e-fold-obj")
-   
+   (==> (if #t v_t v_e) v_t
+        "e-if-true")
+   (==> (if #f v_t v_e) v_e
+        "e-if-false")
+
    with
    [(--> (in-hole E e_1) (in-hole E e_2))
     (==> e_1 e_2)]))
@@ -72,10 +85,15 @@
   [(subst x v (λ (y t_a) t_r e)) (λ (y t_a) t_r (subst x v e))]
   ; boring cases
   [(subst x v string) string]
+  [(subst x v boolean) boolean]
   [(subst x v (e_1 e_2)) ((subst x v e_1) (subst x v e_2))]
   [(subst x v (cat e_1 e_2)) (cat (subst x v e_1) (subst x v e_2))]
   [(subst x v (obj (string e) ...)) (obj (string (subst x v e)) ...)]
   [(subst x v (get e_1 e_2)) (get (subst x v e_1) (subst x v e_2))]
   [(subst x v (ext e_1 e_2 e_3))
-   (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))])
+   (ext (subst x v e_1) (subst x v e_2) (subst x v e_3))]
+  [(subst x v (fold e_1 e_2 e_3))
+   (fold (subst x v e_1) (subst x v e_2) (subst x v e_3))]
+  [(subst x v (if e_1 e_2 e_3))
+   (if (subst x v e_1) (subst x v e_2) (subst x v e_3))])
 

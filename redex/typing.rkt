@@ -9,6 +9,8 @@
 (define-extended-language doof-tc doof-kc
   (Γ • (x : t Γ))
   (tv p
+      bool
+      Top
       (-> t t)
       (t-obj (string t) ...)
       (tλ (X k) t))
@@ -82,6 +84,7 @@
 (define-metafunction doof-tc
   t-trans : e -> t
   [(t-trans string) string]
+  [(t-trans boolean) bool]
   [(t-trans x) x]
   [(t-trans (λ (x t_1) t_2 e)) (tλ (x *) (t-trans e))]
   [(t-trans (λ (x t) e)) (tλ (x *) (t-trans e))]
@@ -92,9 +95,10 @@
    (t-ext (t-trans e_1) (t-trans e_2) (t-trans e_3))]
   [(t-trans (fold e_1 e_2 e_3))
    (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))])
+; TODO: do we need to define trans on get/if expressions?
 
 ; Subtyping relation
-(define-relation doof
+(define-relation doof-tc
   <: ⊆ t × t
   ; S-Arrow
   [(<: (-> t_11 t_12) (-> t_21 t_22))
@@ -115,14 +119,48 @@
         (term (string_n1 ...))
         (term (t_v1 ...))))
      (term (string_n2 ...))
-     (term (t_v2 ...))))])
+     (term (t_v2 ...))))]
+  ; S-Top
+  [(<: t Top)])
+
+; Join algorithm
+(define-metafunction doof-tc
+  ∨ : t t -> t
+  [(∨ t_1 t_2)
+   t_2
+   (side-condition (term (<: t_1 t_2)))]
+  [(∨ t_1 t_2)
+   t_1
+   (side-condition (term (<: t_2 t_1)))]
+  [(∨ (-> t_11 t_12) (-> t_21 t_22))
+   (-> t_1 t_2)
+   (where t_1 (∧ t_11 t_21))
+   (where t_2 (∨ t_12 t_22))]
+  [(∨ p_1 p_2) str]
+  [(∨ t_1 t_2) Top])
+
+; Meet algorithm
+(define-metafunction doof-tc
+  ∧ : t t -> t
+  [(∧ t_1 t_2)
+   t_1
+   (side-condition (term (<: t_1 t_2)))]
+  [(∧ t_1 t_2)
+   t_2
+   (side-condition (term (<: t_2 t_1)))]
+  [(∧ (-> t_11 t_12) (-> t_21 t_22))
+   (-> t_1 t_2)
+   (where t_1 (∨ t_11 t_21))
+   (where t_2 (∧ t_12 t_22))])
 
 ; Type checking
 (define-judgment-form doof-tc
   #:mode (types I I O)
   #:contract (types Γ e t)
+
+  [(types Γ string string) "t-str"]
   
-  [(types Γ string_1 string_1) "t-str"]
+  [(types Γ boolean bool) "t-bool"]
   
   [(types (x : t Γ) x t) "t-var"]
   
@@ -204,4 +242,11 @@
 
   [(where t (t-reduce Γ (t-trans (fold e_1 e_2 e_3))))
    ------------------------------------------------- "t-fold"
-   (types Γ (fold e_1 e_2 e_3) t)])
+   (types Γ (fold e_1 e_2 e_3) t)]
+  
+  [(types Γ e_1 bool)
+   (types Γ e_2 t_2)
+   (types Γ e_3 t_3)
+   (where t (∨ t_2 t_3))
+   ----------------------------
+   (types Γ (if e_1 e_2 e_3) t)])

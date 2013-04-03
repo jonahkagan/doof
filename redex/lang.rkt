@@ -9,6 +9,7 @@
   (e string
      x
      (λ (x t) t e)
+     (λ (x t) e)
      (e e)
      (cat e e)
      (obj (string e) ...)

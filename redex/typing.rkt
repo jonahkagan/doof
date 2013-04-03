@@ -84,6 +84,7 @@
   [(t-trans string) string]
   [(t-trans x) x]
   [(t-trans (λ (x t_1) t_2 e)) (tλ (x *) (t-trans e))]
+  [(t-trans (λ (x t) e)) (tλ (x *) (t-trans e))]
   [(t-trans (e_1 e_2)) ((t-trans e_1 e_2))]
   [(t-trans (cat e_1 e_2)) (t-cat (t-trans e_1) (t-trans e_2))]
   [(t-trans (obj (string e) ...)) (t-obj (string (t-trans e)) ...)]
@@ -131,12 +132,18 @@
    (types (x_2 : t_2 Γ) x_1 t_1)]
   
   [(kinds • t_a *)
+   (where t_a2 (t-reduce Γ t_a))
+   (types (x : t_a2 Γ) e t_b)
+   ------------------------------------- "t-abs"
+   (types Γ (λ (x t_a) e) (-> t_a2 t_b))]
+  
+  [(kinds • t_a *)
    (kinds • t_r *)
    (where t_a2 (t-reduce Γ t_a))
    (where t_r2 (t-reduce Γ t_r))
    (types (x : t_a2 Γ) e t_b)
    (<: t_b t_r2)
-   ------------------------------------------ "t-abs"
+   ------------------------------------------ "t-abs-ret"
    (types Γ (λ (x t_a) t_r e) (-> t_a2 t_r2))]
   
   [(types Γ e_1 (-> t_11 t_12))

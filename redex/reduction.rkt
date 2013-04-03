@@ -9,7 +9,8 @@
   ; Values
   (v string
      (obj (string v) ...)
-     (λ (x t) t e))
+     (λ (x t) t e)
+     (λ (x t) e))
   ; Contexts
   (E hole
      (E e)
@@ -30,8 +31,10 @@
   (reduction-relation
    doof-ctx
    #:domain e
-   (==> ((λ (x t_1) t_2 e) v) (subst x v e)
+   (==> ((λ (x t) e) v) (subst x v e)
         "e-app")
+   (==> ((λ (x t_1) t_2 e) v) (subst x v e)
+        "e-app-ret")
    (==> (cat string_1 string_2) (str-cat string_1 string_2)
         "e-cat")
    (==> (ext (obj (string_1 v_1) ...) string_new v_new)
@@ -63,6 +66,8 @@
   subst : x v e -> e
   [(subst x v x) v]
   [(subst x v y) y]
+  [(subst x v (λ (x t_a) e)) (λ (x t_a) e)]
+  [(subst x v (λ (y t_a) e)) (λ (y t_a) (subst x v e))]
   [(subst x v (λ (x t_a) t_r e)) (λ (x t_a) t_r e)]
   [(subst x v (λ (y t_a) t_r e)) (λ (y t_a) t_r (subst x v e))]
   ; boring cases

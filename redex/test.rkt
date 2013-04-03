@@ -79,6 +79,9 @@
 (test-types ((λ (x str) str x) "a")
             str)
 
+(test-types ((λ (x str) x) "a")
+            str)
+
 (test-equal (types-of (term ((λ (a str) "b" a) "b")))
             empty)
 
@@ -175,10 +178,10 @@
                             (t-obj)
                             O))
                 (t-obj ("f" str) ("g" str)))
-               ; "i" for ignored
-               (fold (λ (n "i") "i"
-                       (λ (v "i") "i"
-                         (λ (a "i") "i"
+               ; "i" because these annotations will be ignored
+               (fold (λ (n "i")
+                       (λ (v "i")
+                         (λ (a "i")
                            (ext a (cat "my" n) v))))
                      (obj)
                      o))

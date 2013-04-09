@@ -118,9 +118,9 @@
              (obj ("g" "2")))
             (t-obj ("f" str)))
 
-(test-types (fold (λ (name str) (-> str (-> str str))
-                    (λ (val str) (-> str str)
-                      (λ (acc str) str
+(test-types (fold (λ (name str)
+                    (λ (val str)
+                      (λ (acc str)
                         (cat name acc))))
                   ""
                   (obj ("a" "1") ("b" "2") ("c" "3")))
@@ -167,9 +167,9 @@
                             (t-obj)
                             O))
                 (t-obj ("f" str)))
-               (fold (λ (n str) (-> str (-> (t-obj) (t-obj)))
-                       (λ (v str) (-> (t-obj) (t-obj))
-                         (λ (a (t-obj)) (t-obj)
+               (fold (λ (n str)
+                       (λ (v str)
+                         (λ (a (t-obj))
                            (ext a n v))))
                      (obj)
                      o))
@@ -204,20 +204,21 @@
                             ""
                             O))
                 (t-obj ("a" str) ("b" str) ("c" str)))
-               (fold (λ (name str) (-> str (-> str str))
-                       (λ (val str) (-> str str)
-                         (λ (acc str) str
+               (fold (λ (name str)
+                       (λ (val str)
+                         (λ (acc str)
                            (cat val acc))))
                      ""
                      o))
              (obj ("a" "1") ("b" "2") ("c" "3")))
             str)
 
+; Caja freeze
 (types-of
  (term (λ (o (t-obj ("x" str) ("y" str)))
-         (fold (λ (name "i") "i"
-                 (λ (val "i") "i"
-                   (λ (acc "i") "i"
+         (fold (λ (name "i")
+                 (λ (val "i")
+                   (λ (acc "i")
                      (ext
                       (ext 
                        (ext acc
@@ -229,6 +230,42 @@
                       val))))
                (obj)
                o))))
+
+; Backbone-esque
+(types-of
+ (term
+  (λ (spec (t-obj ("id" str) ("ok" bool)))
+    (fold
+     (λ (name "i")
+       (λ (val "i")
+         (λ (acc "i")
+           (ext acc
+                (cat "get-" name)
+                (λ (_ Top) (get spec name))))))
+     (obj)
+     spec))))
+
+
+
+(types-of
+ (term
+  ((λ (string=? (-> str (-> str bool)))
+     (λ (o (t-obj ("id" str) ("name" str) ("alive" bool)))
+       (fold (λ (name "i")
+               (λ (val "i")
+                 (λ (acc "i")
+                   (if ((string=? name) "id")
+                       (ext acc "_id" val)
+                       (ext acc name val)))))
+             (obj)
+             o)))
+   ; cute encoding of string=?
+   (λ (a str)
+     (λ (b str)
+       (get
+        (ext (ext (obj) a #f)
+             b #t)
+        a))))))
 
 #| this is a kind error - we don't know that S is a string type
 (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
@@ -296,6 +333,6 @@
 (test-red (if (if #t #f #t)
               "a" "b")
           "b")
-              
+
 
 (test-results)

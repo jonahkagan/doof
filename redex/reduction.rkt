@@ -85,7 +85,8 @@
   [(subst x v (λ (y t_a) t_r e)) (λ (y t_a) t_r (subst x v e))]
   ; boring cases
   [(subst x v string) string]
-  [(subst x v boolean) boolean]
+  [(subst x v #t) #t]
+  [(subst x v #f) #f]
   [(subst x v (e_1 e_2)) ((subst x v e_1) (subst x v e_2))]
   [(subst x v (cat e_1 e_2)) (cat (subst x v e_1) (subst x v e_2))]
   [(subst x v (obj (string e) ...)) (obj (string (subst x v e)) ...)]

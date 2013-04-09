@@ -56,6 +56,13 @@
    -------------------------------- "k-ext"
    (kinds Γk (t-ext t_1 t_2 t_3) *)]
   
+  [(kinds Γk t_1 *)
+   (kinds Γk t_2 *)
+   ;(<: t_1 (t-obj))
+   ;(<: t_2 str)
+   ---------------------------- "k-get"
+   (kinds Γk (t-get t_1 t_2) *)]
+  
   [(kinds Γk t_1 (=> * (=> * (=> * *))))
    (kinds Γk t_2 *)
    (kinds Γk t_3 *)

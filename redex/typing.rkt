@@ -25,6 +25,8 @@
       (t-ext tE t t)
       (t-ext tv tE t)
       (t-ext tv tv tE)
+      (t-get tE t)
+      (t-get tv tE)
       (t-fold tE t t)
       (t-fold tv tE t)
       (t-fold tv tv tE)))
@@ -52,6 +54,10 @@
                string_k tv_new)
         (t-obj (string_1 tv_1) ... (string_k tv_new) (string_k+1 tv_k+1) ...)
         "q-ext-replace")
+   (==> (t-get (t-obj (string_1 tv_1) ... (string_k tv_k) (string_k+1 tv_k+1) ...)
+               string_k)
+        tv_k
+        "q-get")
    (==> (t-fold tv_f tv_a (t-obj))
         tv_a
         "q-fold-empty")
@@ -86,15 +92,32 @@
   [(t-trans string) string]
   [(t-trans boolean) bool]
   [(t-trans x) x]
-  [(t-trans (λ (x t_1) t_2 e)) (tλ (x *) (t-trans e))]
-  [(t-trans (λ (x t) e)) (tλ (x *) (t-trans e))]
+  [(t-trans (λ (x t_1) t_2 e)) (-> t_1 ((tλ (x *) (t-trans e)) t_1))]
+  [(t-trans (λ (x t) e)) (-> t ((tλ (x *) (t-trans e)) t))]
   [(t-trans (e_1 e_2)) ((t-trans e_1 e_2))]
   [(t-trans (cat e_1 e_2)) (t-cat (t-trans e_1) (t-trans e_2))]
   [(t-trans (obj (string e) ...)) (t-obj (string (t-trans e)) ...)]
   [(t-trans (ext e_1 e_2 e_3))
    (t-ext (t-trans e_1) (t-trans e_2) (t-trans e_3))]
-  [(t-trans (fold e_1 e_2 e_3))
-   (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))])
+  [(t-trans (get e_1 e_2)) (t-get (t-trans e_1) (t-trans e_2))]
+  [(t-trans
+    (fold
+     (λ (x_n t_n)
+       (λ (x_v t_v)
+         (λ (x_a t_a) e_b)))
+     e_2
+     e_3))
+   (t-fold
+    (tλ (x_n *)
+        (tλ (x_v *)
+            (tλ (x_a *)
+                (t-trans e_b))))
+    (t-trans e_2)
+    (t-trans e_3))]
+  #;[(t-trans (fold e_1 e_2 e_3))
+   (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))]
+  #;[(t-trans (if e_1 e_2 e_3))
+     (∨ (t-trans e_2) (t-trans e_3))])
 ; TODO: do we need to define trans on get/if expressions?
 
 ; Subtyping relation
@@ -107,6 +130,8 @@
   ; S-Pat
   [(<: p_1 p_2)
    (<p p_1 p_2)]
+  ; S-Bool
+  [(<: bool bool)]
   ; S-Obj
   [(<: (t-obj (string_n1 t_v1) ...) (t-obj (string_n2 t_v2) ...))
    (side-condition
@@ -157,7 +182,7 @@
 (define-judgment-form doof-tc
   #:mode (types I I O)
   #:contract (types Γ e t)
-
+  
   [(types Γ string string) "t-str"]
   
   [(types Γ boolean bool) "t-bool"]
@@ -232,14 +257,14 @@
   
   ; Old rule to check fold - not precise enough for dep functions
   #;[(types Γ e_1 (-> t_fn (-> t_fv (-> t_a t_a))))
-   (types Γ e_2 t_i)
-   (types Γ e_3 t_o)
-   (<: t_fn str)
-   (<: t_i t_a)
-   (<: t_o (t-obj))
-   ---------------------------------------------- "t-fold"
-   (types Γ (fold e_1 e_2 e_3) t_a)]
-
+     (types Γ e_2 t_i)
+     (types Γ e_3 t_o)
+     (<: t_fn str)
+     (<: t_i t_a)
+     (<: t_o (t-obj))
+     ---------------------------------------------- "t-fold"
+     (types Γ (fold e_1 e_2 e_3) t_a)]
+  
   [(where t (t-reduce Γ (t-trans (fold e_1 e_2 e_3))))
    ------------------------------------------------- "t-fold"
    (types Γ (fold e_1 e_2 e_3) t)]

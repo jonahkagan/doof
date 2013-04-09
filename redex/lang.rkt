@@ -27,6 +27,7 @@
      (t-cat t t)
      (t-obj (string t) ...)
      (t-ext t t t)
+     (t-get t t)
      (t-fold t t t)
      X
      (tλ (X k) t)

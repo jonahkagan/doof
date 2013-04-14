@@ -118,7 +118,7 @@
    (t-fold (t-trans e_1) (t-trans e_2) (t-trans e_3))]
   #;[(t-trans (if e_1 e_2 e_3))
      (∨ (t-trans e_2) (t-trans e_3))])
-; TODO: do we need to define trans on get/if expressions?
+; TODO: do we need to define trans on if expressions?
 
 ; Subtyping relation
 (define-relation doof-tc

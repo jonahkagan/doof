@@ -40,8 +40,30 @@
   (reduction-relation
    doof-ctx
    #:domain e
+   
+   (==> ((λ (x (t-obj (string_t1 tv_1) ...)) e)
+         (obj (string_v1 v_1) ... (string_vk v_k) (string_vk+1 v_k+1) ...))
+        ((λ (x (t-obj (string_t1 tv_1) ...)) e)
+         (obj (string_v1 v_1) ... (string_vk+1 v_k+1) ...))
+        (side-condition (not (member (term string_vk)
+                                     (term (string_t1 ...)))))
+        "e-app-obj-drop")
+   
+   (==> ((λ (x (t-obj (string_t1 tv_1) ...)) e)
+         (obj (string_v1 v_1) ...))
+        (subst x (obj (string_v1 v_1) ...) e)
+        (side-condition (equal? (sort (term (string_t1 ...)) string<?)
+                                (sort (term (string_v1 ...)) string<?)))
+        "e-app-obj")
+   
    (==> ((λ (x t) e) v) (subst x v e)
+        (side-condition (not (redex-match? doof-ctx
+                                           (t-obj (string_1 tv_1) ...)
+                                           (term t)))) 
         "e-app")
+   
+   ; Two rules similar to e-app-obj-drop and e-app-obj could be added for
+   ; lambdas with return type annotations.
    (==> ((λ (x t_1) t_2 e) v) (subst x v e)
         "e-app-ret")
    (==> (cat string_1 string_2) (str-cat string_1 string_2)

@@ -234,7 +234,7 @@
 ; Backbone-esque
 (types-of
  (term
-  (λ (spec (t-obj ("id" str) ("ok" bool)))
+  (λ (spec (t-obj ("id" str) ("alive" bool)))
     (fold
      (λ (name "i")
        (λ (val "i")
@@ -245,27 +245,71 @@
      (obj)
      spec))))
 
+; Width-subtyping soundness issue
+(define width-ex
+  (term ((λ (o (t-obj ("b" bool)))
+           (fold
+            (λ (name "i")
+              (λ (val "i")
+                (λ (acc "i")
+                  (ext acc "a" val))))
+            (obj)
+            o))
+         (obj ("a" "1") ("b" #t)))))
+
+(display "the second should be a subtype of the first\n")
+(first (types-of width-ex))
+(first (types-of (first (reds-of width-ex))))
+(term (<: ,(first (types-of (first (reds-of width-ex))))
+          ,(first (types-of width-ex))))
+
+; Joe's example
+(define ff-prog
+  (term ((λ (o (t-obj ("g" str)))
+           #;((tλ (o *)
+                  (t-fold (tλ (n *)
+                              (tλ (v *)
+                                  (tλ (a *)
+                                      (t-ext a (t-cat "f" n) v))))
+                          (t-obj ("ff" "42"))
+                          o))
+              (t-obj ("g" str)))
+           ; "i" because these annotations will be ignored
+           (fold (λ (n "i")
+                   (λ (v "i")
+                     (λ (a "i")
+                       (ext a (cat "f" n) v))))
+                 (obj ("ff" "42"))
+                 o))
+         (obj ("g" "2") ("f" "3")))))
+
+(display "the second should be a subtype of the first\n")
+(first (types-of ff-prog))
+(first (types-of (first (reds-of ff-prog))))
+(term (<: ,(first (types-of (first (reds-of ff-prog))))
+          ,(first (types-of ff-prog))))
 
 
-(types-of
- (term
-  ((λ (string=? (-> str (-> str bool)))
-     (λ (o (t-obj ("id" str) ("name" str) ("alive" bool)))
-       (fold (λ (name "i")
-               (λ (val "i")
-                 (λ (acc "i")
-                   (if ((string=? name) "id")
-                       (ext acc "_id" val)
-                       (ext acc name val)))))
-             (obj)
-             o)))
-   ; cute encoding of string=?
-   (λ (a str)
-     (λ (b str)
-       (get
-        (ext (ext (obj) a #f)
-             b #t)
-        a))))))
+; FAILING
+#;(types-of
+   (term
+    ((λ (string=? (-> str (-> str bool)))
+       (λ (o (t-obj ("id" str) ("name" str) ("alive" bool)))
+         (fold (λ (name "i")
+                 (λ (val "i")
+                   (λ (acc "i")
+                     (if ((string=? name) "id")
+                         (ext acc "_id" val)
+                         (ext acc name val)))))
+               (obj)
+               o)))
+     ; cute encoding of string=?
+     (λ (a str)
+       (λ (b str)
+         (get
+          (ext (ext (obj) a #f)
+               b #t)
+          a))))))
 
 #| this is a kind error - we don't know that S is a string type
 (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")

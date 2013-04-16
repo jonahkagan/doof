@@ -4,7 +4,8 @@
 (require "lang.rkt"
          "kinding.rkt"
          "typing.rkt"
-         "reduction.rkt")
+         "reduction.rkt"
+         "pretyping.rkt")
 
 (define (progress-holds? e)
   (if (types? e)
@@ -158,6 +159,7 @@
              (obj ("f" "1")))
             (t-obj ("f" str)))
 
+
 (test-types ((λ (o (t-obj ("f" str)))
                ((tλ (O *)
                     (t-fold (tλ (N *)
@@ -245,24 +247,36 @@
      (obj)
      spec))))
 
+
 ; Width-subtyping soundness issue
-(define width-ex
-  (term ((λ (o (t-obj ("b" bool)))
-           (fold
-            (λ (name "i")
-              (λ (val "i")
-                (λ (acc "i")
-                  (ext acc "a" val))))
-            (obj)
-            o))
-         (obj ("a" "1") ("b" #t)))))
+(define lam
+  (term (λ (o (t-obj ("b" bool)))
+          (fold
+           (λ (name "i")
+             (λ (val "i")
+               (λ (acc "i")
+                 (ext acc "a" val))))
+           (obj)
+           o))))
+(define arg
+  (term (obj ("a" "1") ("b" #t))))
 
-(display "the second should be a subtype of the first\n")
-(first (types-of width-ex))
-(first (types-of (first (reds-of width-ex))))
-(term (<: ,(first (types-of (first (reds-of width-ex))))
-          ,(first (types-of width-ex))))
+(define width-ex-bad
+  (term (,lam ,arg)))
+(define width-ex-good
+  (term (,(pretype-transform lam) ,arg)))
 
+(display "the original example no longer typechecks\n")
+(types-of width-ex-bad)
+
+(display "after the transformation, the second should be a subtype of the first\n")
+(first (types-of width-ex-good))
+(first (types-of (first (reds-of width-ex-good))))
+(term (<: ,(first (types-of (first (reds-of width-ex-good))))
+          ,(first (types-of width-ex-good))))
+
+
+#|
 ; Joe's example
 (define ff-prog
   (term ((λ (o (t-obj ("g" str)))
@@ -288,35 +302,35 @@
 (first (types-of (first (reds-of ff-prog))))
 (term (<: ,(first (types-of (first (reds-of ff-prog))))
           ,(first (types-of ff-prog))))
-
+|#
 
 ; FAILING
 #;(types-of
-   (term
-    ((λ (string=? (-> str (-> str bool)))
-       (λ (o (t-obj ("id" str) ("name" str) ("alive" bool)))
-         (fold (λ (name "i")
-                 (λ (val "i")
-                   (λ (acc "i")
-                     (if ((string=? name) "id")
-                         (ext acc "_id" val)
-                         (ext acc name val)))))
-               (obj)
-               o)))
-     ; cute encoding of string=?
-     (λ (a str)
-       (λ (b str)
-         (get
-          (ext (ext (obj) a #f)
-               b #t)
-          a))))))
+(term
+((λ (string=? (-> str (-> str bool)))
+(λ (o (t-obj ("id" str) ("name" str) ("alive" bool)))
+(fold (λ (name "i")
+(λ (val "i")
+(λ (acc "i")
+(if ((string=? name) "id")
+(ext acc "_id" val)
+(ext acc name val)))))
+(obj)
+o)))
+; cute encoding of string=?
+(λ (a str)
+(λ (b str)
+(get
+(ext (ext (obj) a #f)
+b #t)
+a))))))
 
 #| this is a kind error - we don't know that S is a string type
-(test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
-               (cat s "b"))
-             "a")
-            "ab")
-|#             
+   (test-types ((λ (s "a") ((tλ (S *) (t-cat S "b")) "a")
+                  (cat s "b"))
+                "a")
+               "ab")
+   |#             
 
 
 ; Evaluation

@@ -13,8 +13,8 @@ pyDatalog.create_atoms('has_field', 'spec', 'model')
 
 # ill formed - id has wrong type
 + spec('spec2')
-+ has_field('spec1', 'a', 't')
-+ has_field('spec1', 'b', 's')
++ has_field('spec2', 'a', 't')
++ has_field('spec2', 'b', 's')
 + has_field('spec2', 'id', 't')
 
 # well formed
@@ -29,9 +29,9 @@ pyDatalog.create_atoms('has_field', 'spec', 'model')
 
 # ill formed - missing fields from attrs
 + model('model1-2')
-+ has_field('model2-1', 'attributes', 'attrs2-1')
++ has_field('model1-2', 'attributes', 'attrs1-2')
 
-+ has_field('attrs2-1', 'a', 't')
++ has_field('attrs1-2', 'a', 't')
 
 # ill formed - missing id field
 + model('model1-3')

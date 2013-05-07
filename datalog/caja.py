@@ -8,6 +8,7 @@ pyDatalog.create_atoms('has_field', 'caja_pair', 'str_cat')
 + has_field('o1', 'a', 't')
 + has_field('o1', 'b', 's')
 
+# caja_pair(o, c) if c = o.freeze()
 + caja_pair('o1', 'c1')
 
 + str_cat('a', '_v__', 'a_v__')
